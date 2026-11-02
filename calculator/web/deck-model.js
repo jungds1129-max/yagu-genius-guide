@@ -28,8 +28,11 @@
     return p;
   }
   function project(p,k,mode='target'){if(p.stats[k]===undefined)return null;const value=p.stats[k]+(mode==='target'?p.target-p.level:0);return p.cap===null?value:Math.min(p.cap,value);}
-  // 2~3각 타자는 은퇴 가능 나이(33세+)가 지나도 계속 쓰는 유지 대상으로 본다.
-  function keeper(p){return p.type==='batter'&&p.awaken>=2&&p.age!==null&&p.age>=33;}
+  // 2~3각 타자는 은퇴 가능 나이(33세)가 지나도 38세까지 쓰고 38세에 은퇴한다 (사용자 운영 기준).
+  const KEEP_UNTIL=38;
+  function veteran(p){return p.type==='batter'&&p.awaken>=2&&p.age!==null;}
+  function keeper(p){return veteran(p)&&p.age>=33&&p.age<KEEP_UNTIL;}
+  function retireNow(p){return veteran(p)&&p.age>=KEEP_UNTIL;}
   function eligible(p){return p.status!=='보관함';}
   function candidates(players,mode='target',done=[]){
     const out=[];
@@ -86,9 +89,9 @@
       const ranked=pool.map(compare).filter(Boolean).sort((a,b)=>b.now-a.now||b.future-a.future);
       const top=ranked[0];let state=!pool.length?'후계자 준비 필요':!top?'후보 스탯 입력 필요':top.now>=0?'교체 검토':'후계자 육성 중';
       if(p.age<35&&top)state=p.age>=33&&top.now<0?'후계자 우선 육성':p.age===32?'후계자 육성 점검':'미리 준비';
-      const warning=p.age>=40?'40세 · 계약 강제 만료·재계약 불가 대비':p.age===null?'나이 미입력 · 지정 후계자 비교':p.age>=35?'35세 이상 · 시즌 정산마다 전 능력치 -3에 대비':p.age>=33?'33~34세 · 후계자 준비 상태 우선 점검':p.age===32?'32세 · 후계자 육성 시작·성장 비교':'30세부터 후계 후보 확보 · 즉시 교체할 필요는 없습니다.';
+      const warning=retireNow(p)?KEEP_UNTIL+'세 · 2~3각 은퇴 시기 · 경험 전수로 후계자에게 넘기세요':keeper(p)&&p.age>=35?'2~3각 유지 · '+KEEP_UNTIL+'세 은퇴 전까지 정산 -3을 정밀훈련으로 메우고 후계자를 키우세요':p.age>=40?'40세 · 계약 강제 만료·재계약 불가 대비':p.age===null?'나이 미입력 · 지정 후계자 비교':p.age>=35?'35세 이상 · 시즌 정산마다 전 능력치 -3에 대비':p.age>=33?'33~34세 · 후계자 준비 상태 우선 점검':p.age===32?'32세 · 후계자 육성 시작·성장 비교':'30세부터 후계 후보 확보 · 즉시 교체할 필요는 없습니다.';
       return {player:p,state,candidate:top||null,selected:pool[0]||null,pool:pool.length,warning};
     }).sort((a,b)=>b.player.age-a.player.age);
   }
-  scope.DeckModel={batting,pitching,pitches,pitchStats,keys,positions,location,weight,player,project,eligible,keeper,candidates,plan,succession};
+  scope.DeckModel={batting,pitching,pitches,pitchStats,keys,positions,location,weight,player,project,eligible,keeper,retireNow,KEEP_UNTIL,candidates,plan,succession};
 })(typeof module==='object'?module.exports:window);

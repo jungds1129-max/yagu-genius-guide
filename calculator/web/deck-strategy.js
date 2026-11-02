@@ -77,7 +77,7 @@
    if(!g.length)return '<div class="dk-tile"><h4>'+name+'</h4><p class="dk-muted">등록된 '+name+'가 없어요.</p></div>';
    const lv=avg(g.map(p=>p.target-p.level)),capd=g.filter(p=>p.cap!==null);
    const now=[],later=[];for(const p of capd)for(const k of core(p)){now.push(p.cap-p.stats[k]);later.push(p.cap-M.project(p,k,'target'));}
-   const tr=g.filter(p=>p.used!==null&&p.limit!==null).map(p=>p.limit-p.used),keepers=g.filter(M.keeper);
+   const tr=g.filter(p=>p.used!==null&&p.limit!==null).map(p=>p.limit-p.used),keepers=g.filter(M.keeper),retire=g.filter(M.retireNow);
    const r=avg(later);
    const verdict=r===null?'상한·핵심 스탯을 입력하면 진단해요.':r<=1?'레벨업만으로 거의 상한이에요. 훈련보다 후계 준비 쪽을 보세요.':r<=6?'레벨업 후 조금 남아요. 전지훈련으로 채우면 돼요.':'레벨업 후에도 많이 남아요. 전지훈련·개인훈련 효과가 커요.';
    return '<div class="dk-tile"><h4>'+name+' <span>'+g.length+'명</span></h4><dl>'+
@@ -85,8 +85,8 @@
     '<div><dt>남은 레벨업</dt><dd><b>+'+f(lv)+'</b></dd><small>평균 · 전 능력치 +1씩</small></div>'+
     '<div><dt>남은 개인훈련</dt><dd><b>'+(tr.length?f(tr.reduce((a,b)=>a+b,0)):'—')+'</b>회</dd><small>'+(tr.length?'평균 '+f(avg(tr))+'회 · 입력 '+tr.length+'/'+g.length+'명':'완료 횟수·한도 미입력')+'</small></div></dl>'+
     '<p class="dk-verdict">'+verdict+'</p>'+
-    (keepers.length?'<p class="dk-keep">유지 대상 '+keepers.length+'명 (2~3각, 33세+): '+keepers.map(p=>esc(p.name)).join(', ')+'<br>은퇴시키지 않고 계속 쓰는 선수예요. 파워·컨택·선구안 정밀을 우선해요.</p>':'')+
-    (capd.length<g.length?'<p class="dk-muted">상한 미입력 '+(g.length-capd.length)+'명은 계산에서 빠져요.</p>':'')+'</div>';
+    (keepers.length?'<p class="dk-keep">유지 대상 '+keepers.length+'명 (2~3각, 33~'+(M.KEEP_UNTIL-1)+'세): '+keepers.map(p=>esc(p.name)+' '+p.age+'세').join(', ')+'<br>'+M.KEEP_UNTIL+'세 은퇴 전까지 계속 쓰는 선수예요. 파워·컨택·선구안 정밀을 우선해요.</p>':'')+
+    (retire.length?'<p class="dk-keep">은퇴 시기 '+retire.length+'명 ('+M.KEEP_UNTIL+'세+ 2~3각): '+retire.map(p=>esc(p.name)).join(', ')+'<br>경험 전수로 후계자에게 넘기세요.</p>':'')+(capd.length<g.length?'<p class="dk-muted">상한 미입력 '+(g.length-capd.length)+'명은 계산에서 빠져요.</p>':'')+'</div>';
   };
   box.innerHTML='<span class="dk-badge">우리 팀 현황</span><h3>얼마나 더 클 수 있나</h3><div class="dk-tiles">'+tile('batter')+tile('pitcher')+'</div>';
  }
@@ -157,13 +157,15 @@
    // 개인훈련 슬롯 사용 판단 (guide/22: 성장형에게만, 35세+ 정산 -3).
    const room=p.cap===null?null:avg(cs.map(k=>p.cap-a.stats[k]));
    let slot;
-   if(M.keeper(p))slot='유지 대상이에요. 개인훈련보다 <b>전지훈련 파워·컨택·선구안 정밀</b>로 '+(p.age>=35?'정산 -3을 메우세요.':'타격을 유지하세요.');
+   if(M.retireNow(p))slot='<b>'+M.KEEP_UNTIL+'세, 은퇴 시기예요.</b> 훈련에 더 쓰지 말고 경험 전수로 후계자(30세 이하·Lv10 이하)에게 넘기세요.';
+   else if(M.keeper(p))slot='유지 대상이에요. 개인훈련보다 <b>전지훈련 파워·컨택·선구안 정밀</b>로 '+(p.age>=35?'정산 -3을 메우세요':'타격을 유지하세요')+'. '+M.KEEP_UNTIL+'세에 은퇴하니 후계자도 같이 키우세요.';
    else if(p.age!==null&&p.age>=35)slot='35세+라 정산마다 -3이에요. 개인훈련 슬롯은 쓰지 말고 후계자를 준비하세요.';
    else if(p.age!==null&&p.age>=30)slot='30대라 슬롯은 아끼고 전지훈련으로 유지하세요.';
    else if(room!==null&&room<=2)slot='상한이 가까워서 슬롯 효율이 낮아요. 더 어린 성장형에게 쓰세요.';
    else slot='성장형이에요. 개인훈련 슬롯을 써도 좋아요'+(left!==null?' (남은 '+left+'회)':'')+'. 셔플은 무료·골드까지만 쓰세요.';
    body.push(slot);
-   return '<details class="dk-coach-player"><summary><span><b>'+esc(p.name)+'</b> <small>'+esc(p.position)+' · '+(p.age??'?')+'세 · '+p.awaken+'각 · Lv'+p.level+(M.keeper(p)?' · 유지':'')+'</small></span><em>'+esc(head)+'</em></summary>'+body.map(b=>'<p>'+b+'</p>').join('')+
+   if(M.retireNow(p))head='은퇴 시기 · 경험 전수';
+   return '<details class="dk-coach-player"><summary><span><b>'+esc(p.name)+'</b> <small>'+esc(p.position)+' · '+(p.age??'?')+'세 · '+p.awaken+'각 · Lv'+p.level+(M.keeper(p)?' · 유지':M.retireNow(p)?' · 은퇴 시기':'')+'</small></span><em>'+esc(head)+'</em></summary>'+body.map(b=>'<p>'+b+'</p>').join('')+
     (p.cap!==null&&ks.length?'<div class="dk-scroll"><table class="dk-table"><thead><tr><th>능력치</th><th>지금</th><th>레벨업 후</th><th>캠프 후</th><th>상한</th></tr></thead><tbody>'+ks.sort((x,y)=>(cs.includes(y)-cs.includes(x))).map(k=>'<tr'+(cs.includes(k)?' class="dk-core"':'')+'><th>'+esc(k)+'</th><td>'+f(p.stats[k])+'</td><td>'+f(M.project(p,k,'target'))+'</td><td>'+f(a.stats[k])+'</td><td>'+p.cap+'</td></tr>').join('')+'</tbody></table></div>':'')+'</details>';
   }).join('')+'<p class="dk-muted">캠프 후 값은 위에서 고른 전지훈련 조합 기준이에요. 개인훈련(랜덤 2개 +1)은 결과가 랜덤이라 예상치에 넣지 않았어요.</p>';
  }
