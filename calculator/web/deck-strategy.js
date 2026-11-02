@@ -48,7 +48,7 @@
  // 효율 점수: 핵심 스탯 상승 ×1, 그 외 ×0.5, 유지 대상(2~3각 33~37세)의 파워·컨택·선구안 ×2 (은퇴 전까지 지명타자로 오래 쓰기).
  // 남은 사용 기간: 일반 선수는 35세(정산 -3 시작), 2~3각 타자는 38세(은퇴)까지. 5년 이상이면 1, 짧을수록 낮게 친다.
  function life(p){if(p.age===null)return 1;const end=p.type==='batter'&&p.awaken>=2?M.KEEP_UNTIL:35;return Math.max(0.2,Math.min(5,end-p.age)/5);}
- function weightOf(p,k){const w=M.keeper(p)&&BAT_CORE.includes(k)?2:core(p).includes(k)?1:0.5;return w*life(p);}
+ function weightOf(p,k){const w=M.keeper(p)&&p.age>=35&&BAT_CORE.includes(k)?2:core(p).includes(k)?1:0.5;return w*life(p);}
  let baseCache=null;
  function score(sim){const base=baseCache||(baseCache=simulate([]));let s=0;for(const a of sim.players){if(!M.eligible(a)||a.cap===null)continue;const b=base.players.find(q=>q.id===a.id);for(const k of Object.keys(a.stats))s+=(a.stats[k]-b.stats[k])*weightOf(a,k);}return s;}
  const PRECISION=['파워','컨택','선구안','스피드','멘탈'].map(k=>'batter:'+k);
@@ -120,7 +120,9 @@
   const capped=bats.filter(p=>BAT_CORE.every(k=>p.stats[k]===undefined||base.players.find(q=>q.id===p.id).stats[k]>=p.cap)&&BAT_CORE.some(k=>p.stats[k]!==undefined));
   const keepers=pool().filter(M.keeper),pit=pool().filter(p=>p.type==='pitcher'&&p.cap!==null);
   if(capped.length)why.push('타자 '+capped.length+'명('+capped.slice(0,4).map(p=>esc(p.name)).join(', ')+(capped.length>4?' 등':'')+')은 레벨업 후 파워·컨택·선구안이 이미 상한이라 정밀을 올려도 효과가 없어요.');
-  if(keepers.length)why.push('유지 대상('+keepers.map(p=>esc(p.name)+' '+p.age+'세').join(', ')+')은 '+M.KEEP_UNTIL+'세까지 지명타자로 쓸 선수라, 상한 아래로 떨어진 파워·컨택·선구안을 채우는 건 두 배로 쳐서 계산했어요. 상한에 있으면 0으로 계산해요.');
+  const dropping=keepers.filter(p=>p.age>=35);
+  if(dropping.length)why.push('유지 대상 중 35세 이상('+dropping.map(p=>esc(p.name)+' '+p.age+'세').join(', ')+')은 정산마다 -3씩 떨어져요. '+M.KEEP_UNTIL+'세까지 지명타자로 쓸 선수라 떨어진 파워·컨택·선구안을 채우는 건 두 배로 쳐서 계산했어요.');
+  if(keepers.length>dropping.length)why.push('33~34세 유지 대상('+keepers.filter(p=>p.age<35).map(p=>esc(p.name)).join(', ')+')은 아직 안 떨어져서 다른 선수와 똑같이 계산해요.');
   if(pit.length){const young=pit.filter(p=>p.age!==null&&p.age<30).length,room=effect([]).pitcher.room;why.push('투수 '+pit.length+'명 중 '+young+'명이 30세 미만이라 오른 스탯을 오래 써요. 핵심 스탯은 상한까지 평균 '+(room===null?'—':f(room))+' 남아 있어요.');}
   const runner=all.slice(1).filter(r=>r.seq.length).slice(0,2);
   const advice=[];
@@ -139,7 +141,7 @@
    (choice!=='manual'&&runner.length?'<h4>다음으로 좋은 조합</h4><ul>'+runner.map(r=>'<li>'+describe(r.seq)+' <span class="dk-muted">(효율 '+f(r.score)+', '+f(r.score-top.score)+')</span></li>').join('')+'</ul>':'')+
    (e.invalid?'<p class="dk-warning">이미 한 정밀훈련이나 중복 정밀 '+e.invalid+'회는 효과에서 뺐어요.</p>':'')+
    (partial?'<p class="dk-muted">능력치를 다 넣지 않은 선수는 종합 캠프를 입력한 능력치 중 약한 4개로 추정했어요.</p>':'')+
-   '<p class="dk-muted">'+(s.mode==='target'?'목표 레벨까지 올린 뒤':'현재 스탯')+' 기준 추정 · 정밀 +3.5, 종합 +1.5 · 효율 점수는 핵심 스탯 ×1, 나머지 ×0.5, 유지 대상의 파워·컨택·선구안 ×2에 남은 사용 기간(35세, 2~3각 타자는 38세까지, 최대 5년)을 곱해 합산해요. 35세 이상은 정산 -3이 반영된 스탯으로 넣어 주세요.</p></div>'+
+   '<p class="dk-muted">'+(s.mode==='target'?'목표 레벨까지 올린 뒤':'현재 스탯')+' 기준 추정 · 정밀 +3.5, 종합 +1.5 · 효율 점수는 핵심 스탯 ×1, 나머지 ×0.5, 35~37세 유지 대상의 파워·컨택·선구안 ×2에 남은 사용 기간(35세, 2~3각 타자는 38세까지, 최대 5년)을 곱해 합산해요. 35세 이상은 정산 -3이 반영된 스탯으로 넣어 주세요.</p></div>'+
    '<details class="dk-more"><summary>선수별 전지훈련 후 예상 스탯</summary>'+table(e)+'</details>';
  }
  function table(e){
