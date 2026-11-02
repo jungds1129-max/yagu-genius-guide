@@ -1,0 +1,11 @@
+import fs from 'node:fs';
+import path from 'node:path';
+const root=process.cwd(),web=path.join(root,'web');
+const manifest=JSON.parse(fs.readFileSync('.openai/hosting.json','utf8'));
+const assets=Object.fromEntries(fs.readdirSync(web).filter(n=>/\.(html|js|css)$/.test(n)).map(n=>['/'+n,fs.readFileSync(path.join(web,n),'utf8')]));
+const output=path.resolve(root,'dist');
+if(output!==path.join(root,'dist')||!fs.existsSync(path.join(web,'index.html')))throw Error('Invalid build paths');
+fs.rmSync(output,{recursive:true,force:true});
+const api=fs.readFileSync('worker/api.mjs','utf8').replace('export {deckApi,identity,settings};','');
+const bundle=`const window={};\n${assets['/deck-model.js']}\n${api}\nconst assets=${JSON.stringify(assets)};\nexport default {async fetch(request,env){try{const u=new URL(request.url);if(u.pathname.startsWith('/api/'))return await deckApi(request,env);if(!['GET','HEAD'].includes(request.method))return new Response('Method not allowed',{status:405});const p=u.pathname==='/'?'/index.html':u.pathname;const body=assets[p];if(body===undefined)return new Response('Not found',{status:404});const type=p.endsWith('.js')?'text/javascript':p.endsWith('.css')?'text/css':'text/html';return new Response(request.method==='HEAD'?null:body,{headers:{'Content-Type':type+'; charset=utf-8','Cache-Control':'no-cache','X-Content-Type-Options':'nosniff','Referrer-Policy':'strict-origin-when-cross-origin','Cross-Origin-Opener-Policy':'same-origin-allow-popups'}});}catch{return new Response('잠시 후 다시 시도하세요.',{status:500,headers:{'Cache-Control':'no-store'}});}}};`;
+fs.mkdirSync('dist/server',{recursive:true});fs.mkdirSync('dist/.openai',{recursive:true});fs.writeFileSync('dist/server/index.js',bundle);fs.writeFileSync('dist/.openai/hosting.json',JSON.stringify(manifest,null,2));console.log('Built account-isolated Worker and '+Object.keys(assets).length+' assets');

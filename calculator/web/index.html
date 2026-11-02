@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>야구천재 계산기</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700;900&family=IBM+Plex+Mono:wght@500;700&display=swap">
+<style>
+/* 레이아웃: 전광판 느낌의 단일 열 계산기 — 위에서 아래로 입력 → 결과 */
+:root{
+  --bg:#f3f1ea; --panel:#ffffff; --line:#d9d5c8; --fg:#1b2230; --muted:#5d6577;
+  --accent:#0f5a3c; --accent-ink:#ffffff; --gold:#a8780a;
+  --plat:#6a4fc4; --plat-bg:#efeafc; --goldc:#9a6d00; --gold-bg:#fbf3d8; --silv:#5e6676; --silv-bg:#eef0f3; --brz:#9a5a1e; --brz-bg:#f8ece0;
+  --good:#11804f; --mid:#9a6d00; --bad:#c23b32;
+  --display:'Black Han Sans','Noto Sans KR',system-ui,sans-serif;
+  --body:'Noto Sans KR',system-ui,-apple-system,sans-serif;
+  --num:'IBM Plex Mono',ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e1522; --panel:#161f30; --line:#2a3650; --fg:#e8ecf4; --muted:#9aa6bd;
+  --accent:#ffd23f; --accent-ink:#1a1300; --gold:#ffd23f;
+  --plat:#c6b4ff; --plat-bg:#2b2350; --goldc:#ffe066; --gold-bg:#3a3000; --silv:#dde2ea; --silv-bg:#2a2e36; --brz:#e6a560; --brz-bg:#35210f;
+  --good:#3ecf8e; --mid:#e8c000; --bad:#ff6b61; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1522; --panel:#161f30; --line:#2a3650; --fg:#e8ecf4; --muted:#9aa6bd;
+  --accent:#ffd23f; --accent-ink:#1a1300; --gold:#ffd23f;
+  --plat:#c6b4ff; --plat-bg:#2b2350; --goldc:#ffe066; --gold-bg:#3a3000; --silv:#dde2ea; --silv-bg:#2a2e36; --brz:#e6a560; --brz-bg:#35210f;
+  --good:#3ecf8e; --mid:#e8c000; --bad:#ff6b61; color-scheme:dark}
+*{box-sizing:border-box} [hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.5;margin:0}
+.wrap{max-width:560px;margin:0 auto;padding-block:20px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:16px}
+h1{font-family:var(--display);font-weight:400;font-size:30px;margin:0;letter-spacing:.5px;text-wrap:balance}
+.lede{color:var(--muted);margin:2px 0 0;font-size:14px}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:4px}
+.seg button{font:inherit;font-weight:700;border:0;border-radius:9px;padding:10px 4px;background:transparent;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.seg button:focus-visible,select:focus-visible,.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.label{font-size:12px;font-weight:700;letter-spacing:.08em;color:var(--muted)}
+.ctrls{display:grid;gap:8px}
+.slots{display:flex;flex-direction:column;gap:8px}
+.slot{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:grid;grid-template-columns:1fr auto;gap:8px 10px;align-items:center}
+.slot .head{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;gap:8px;min-width:0}
+.slot .head span{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.06em}
+.slot.awk{border-style:dashed}
+select{font:inherit;font-size:16px;width:100%;min-width:0;padding:9px 10px;border-radius:9px;border:1px solid var(--line);background:var(--bg);color:var(--fg)}
+.enh{width:auto;font-size:14px}
+.chip{display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:13px;padding:2px 9px;border-radius:999px;border:1.5px solid;white-space:nowrap}
+.chip.P{color:var(--plat);background:var(--plat-bg);border-color:var(--plat)}
+.chip.G{color:var(--goldc);background:var(--gold-bg);border-color:var(--goldc)}
+.chip.S{color:var(--silv);background:var(--silv-bg);border-color:var(--silv)}
+.chip.B{color:var(--brz);background:var(--brz-bg);border-color:var(--brz)}
+.chip b{font-family:var(--num)}
+.result{background:var(--panel);border:2px solid var(--accent);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.big{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.total{font-family:var(--num);font-weight:700;font-size:44px;line-height:1;font-variant-numeric:tabular-nums}
+.pct{font-weight:900;font-size:18px}
+.verdict{display:inline-block;font-weight:900;padding:4px 12px;border-radius:999px;color:#fff;font-size:15px}
+.v-top{background:var(--good)} .v-mid{background:var(--mid);color:#1a1300} .v-bad{background:var(--bad)}
+.why{margin:0;color:var(--fg);font-size:14px}
+.scale{position:relative;height:40px;margin:6px 4px 18px}
+.scale .track{position:absolute;left:0;right:0;top:14px;height:8px;border-radius:4px;background:linear-gradient(90deg,var(--bad),var(--mid) 45%,var(--good) 80%);opacity:.45}
+.scale .tick{position:absolute;top:8px;width:2px;height:20px;background:var(--muted)}
+.scale .tick i{position:absolute;top:22px;left:50%;transform:translateX(-50%);font-style:normal;font-size:11px;color:var(--muted);white-space:nowrap;font-family:var(--num)}
+.scale .me{position:absolute;top:6px;width:14px;height:24px;margin-left:-7px;border-radius:5px;background:var(--fg);transition:left .25s}
+.rows{display:grid;grid-template-columns:auto 1fr auto;gap:4px 10px;font-size:14px}
+.rows .n{font-family:var(--num);text-align:right;font-variant-numeric:tabular-nums}
+.rows .k{color:var(--muted)}
+.warn{font-size:13px;color:var(--bad);margin:0}
+.ref{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+.ref th,.ref td{padding:5px 6px;border-bottom:1px solid var(--line);text-align:right}
+.ref th:first-child,.ref td:first-child{text-align:left}
+.ref tr.on td{color:var(--accent);font-weight:700}
+.tablewrap{overflow-x:auto}
+details{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+summary{cursor:pointer;font-weight:700}
+details p{margin:8px 0 0;color:var(--muted);font-size:13px}
+.ex{font-size:12px;color:var(--muted)}
+.btn{font:inherit;font-size:13px;font-weight:700;border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:8px;padding:5px 10px;cursor:pointer}
+@media (prefers-reduced-motion:reduce){.scale .me{transition:none}}
+.searchbox{position:relative;min-width:0}.searchbox input{font:inherit;font-size:16px;width:100%;padding:9px 10px;border-radius:9px;border:1px solid var(--line);background:var(--bg);color:var(--fg)}.searchbox input:focus{outline:2px solid var(--accent);outline-offset:2px}.suggestions{position:absolute;top:calc(100% + 5px);left:0;right:0;z-index:20;max-height:260px;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px #0002;padding:4px}.suggestion{padding:10px 8px;cursor:pointer;border-radius:6px;font-size:14px}.suggestion[aria-selected="true"],.suggestion:hover{background:var(--bg);color:var(--accent)}.suggestion small{display:block;color:var(--muted);font-size:12px}.no-match{padding:12px;color:var(--muted);font-size:13px}
+.main-tabs{margin-bottom:0}.trait-panel{display:flex;flex-direction:column;gap:16px}.main-tabs button{font-size:14px}
+
+#budget-demo{padding:20px 10px;color-scheme:light dark}
+#budget-demo .phone{--paper:light-dark(#f3f1ea,#0e1522);--panel:light-dark(#fff,#161f30);--ink:light-dark(#1b2230,#e8ecf4);--dim:light-dark(#5d6577,#a6b1c5);--line:light-dark(#d9d5c8,#2a3650);--brand:light-dark(#0f5a3c,#ffd23f);--onbrand:light-dark(#fff,#1a1300);max-width:540px;margin:auto;padding:24px 18px;background:var(--paper);color:var(--ink);border-radius:20px;font-family:system-ui,sans-serif}
+#budget-demo h2{margin:0 0 6px;font-size:24px;font-weight:700}#budget-demo .sub{color:var(--dim);font-size:13px;margin:0 0 20px}
+#budget-demo .tabs{display:flex;gap:4px;padding:4px;border:1px solid var(--line);border-radius:12px;background:var(--panel);margin-bottom:22px}
+#budget-demo button,#budget-demo input,#budget-demo select{font:inherit}#budget-demo button{cursor:pointer}
+#budget-demo .tabs button{flex:1;border:0;padding:11px 4px;border-radius:8px;background:transparent;color:var(--dim);font-weight:700}
+#budget-demo .tabs button[aria-selected=true]{background:var(--brand);color:var(--onbrand)}
+#budget-demo .fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}#budget-demo label{display:block;font-size:13px;font-weight:600}#budget-demo input[type=number],#budget-demo select{display:block;width:100%;box-sizing:border-box;margin-top:8px;padding:11px 10px;border:1px solid var(--line);border-radius:9px;color:var(--ink);background:var(--panel);font-size:16px}
+#budget-demo .toggle{margin:16px 0 20px;display:flex;align-items:center;gap:8px;font-weight:400}#budget-demo input[type=checkbox]{width:18px;height:18px;accent-color:var(--brand)}
+#budget-demo .result{border:2px solid var(--brand);border-radius:15px;background:var(--panel);padding:18px;margin-bottom:22px}#budget-demo .kicker{color:var(--dim);font-size:12px;font-weight:700}#budget-demo .big{font-size:32px;font-weight:800;margin:5px 0 12px;font-variant-numeric:tabular-nums}#budget-demo .meta{display:flex;flex-wrap:wrap;gap:6px 20px;font-size:13px;color:var(--dim)}
+#budget-demo h3{font-size:16px;margin:0 0 10px;font-weight:700}#budget-demo .item{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);font-size:14px}#budget-demo .item small{display:block;color:var(--dim);font-size:12px;margin-top:4px}#budget-demo .cost{white-space:nowrap;font-variant-numeric:tabular-nums}#budget-demo .note{color:var(--dim);font-size:12px;margin:16px 0 0;line-height:1.7}#budget-demo .empty{padding:16px 0;color:var(--dim);font-size:14px}#budget-demo [hidden]{display:none!important}
+@media(max-width:380px){#budget-demo .fields{grid-template-columns:1fr}#budget-demo .phone{padding:20px 14px}}
+
+#budget-demo{padding:0}#budget-demo .phone{padding:0;border-radius:0;max-width:none;background:transparent}
+
+.maker-credit{display:block;width:fit-content;max-width:100%;margin:10px auto 8px;text-align:center;padding:8px 12px;border-radius:8px;background:var(--accent);color:var(--accent-ink);font-size:15px;font-weight:900;letter-spacing:.01em}
+
+.wrap>header{text-align:center}
+</style>
+<link rel="stylesheet" href="experience.css">
+<link rel="stylesheet" href="stats.css">
+<link rel="stylesheet" href="deck.css">
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>야구천재 계산기</h1>
+    <p class="maker-credit">팀코리아 - 월드스카우트 제작</p>
+    <p class="lede">특성을 고르면 가산점 합계와 같은 등급 선수 중 상위 몇 %인지 바로 보여줍니다. 리롤할지 말지 판단용.</p>
+  </header>
+
+  <div class="seg main-tabs" role="tablist" aria-label="계산기 종류"><button type="button" role="tab" id="traits-tab" aria-controls="traits-panel" aria-selected="true" aria-pressed="true">특성 계산</button><button type="button" role="tab" id="budget-tab" aria-controls="budget-panel" aria-selected="false" aria-pressed="false">과금·재화 계산</button><button type="button" role="tab" id="experience-tab" aria-controls="experience-panel" aria-selected="false" aria-pressed="false">경험치 계산기</button><button type="button" role="tab" id="stats-tab" aria-controls="stats-panel" aria-selected="false" aria-pressed="false">스탯 미리보기</button><button type="button" role="tab" id="deck-tab" aria-controls="deck-panel" aria-selected="false" aria-pressed="false">덱 관리</button></div>
+  <div id="traits-panel" class="trait-panel" role="tabpanel" aria-labelledby="traits-tab">
+  <div class="ctrls">
+    <span class="label">포텐셜</span>
+    <div class="seg" id="starSeg" role="group" aria-label="포텐셜">
+      <button type="button" data-v="5" aria-pressed="true">★5성 (3칸)</button>
+      <button type="button" data-v="4" aria-pressed="false">★4성 (2칸)</button>
+    </div>
+    <span class="label">포지션</span>
+    <div class="seg" id="roleSeg" role="group" aria-label="포지션">
+      <button type="button" data-v="타자" aria-pressed="true">타자</button>
+      <button type="button" data-v="선발" aria-pressed="false">선발</button>
+      <button type="button" data-v="불펜" aria-pressed="false">불펜</button>
+      <button type="button" data-v="마무리" aria-pressed="false">마무리</button>
+    </div>
+  </div>
+
+  <div class="slots" id="slots"></div>
+
+  <section class="result" aria-live="polite">
+    <div class="big">
+      <div>
+        <div class="label">메인 칸 가산점 합계</div>
+        <div class="total" id="total">+0.0</div>
+      </div>
+      <div style="text-align:right">
+        <div class="pct" id="pct">-</div>
+        <span class="verdict" id="verdict">-</span>
+      </div>
+    </div>
+    <div class="scale" id="scale" aria-hidden="true"><div class="track"></div></div>
+    <p class="why" id="why"></p><p class="note" id="reroll-cost"></p><p class="note">메인 리롤은 전체 칸 재추첨 · 강화 초기화. 각성칸은 별도 리롤이며 메인 점수·백분위에는 포함하지 않습니다.</p>
+    <p class="warn" id="warn" hidden></p>
+    <div class="rows" id="awkRows" hidden>
+      <span class="k">각성칸 포함 총합</span><span></span><span class="n" id="grand">+0.0</span>
+    </div>
+  </section>
+
+  <details>
+    <summary>같은 등급·포지션 기준표</summary>
+    <div class="tablewrap"><table class="ref" id="ref"></table></div>
+    <p>가이드의 특성 등급 확률(5성 브론즈 10·실버 30·골드 40·플래 20%, 4성 30·40·25·5%)로 특성을 4만 번 뽑아 만든 분포입니다. 플래티넘은 메인 칸에 1개까지. 등급 내 특성은 동일 확률로 가정한 추정 모델이며, 강화 없는 새 조합과 비교합니다.</p>
+  </details>
+  <details>
+    <summary>가산점은 어떻게 계산했나</summary>
+    <p>스탯 120 기준으로 <b>효과% × 발동 빈도 × 효과 범위 × 승부처 가중치</b>를 환산한 값입니다. 발동 빈도는 실제 야구 평균(투수 위기 약 35%, 타자 클러치 약 15%, 접전 45%, 2아웃 33%, 만루 3%)을 썼고, 승부처는 1.5~2배로 계산했습니다.</p>
+    <p>같은 특성도 포지션에 따라 값이 다릅니다. 예를 들어 9회 특성은 마무리에게 매 등판 켜지고, 선발 전용 특성은 불펜에서 약해집니다.</p>
+    <p>강화 등급은 기본 수치에 D +7.5%, C +20%, B +30%, A +40%, S +47.5%를 더한 대략값입니다. 모든 수치는 추정치라 순서 비교용으로 보세요.</p>
+  </details>
+</div>
+<section id="budget-panel" role="tabpanel" aria-labelledby="budget-tab" hidden><div id="budget-demo"><div class="phone">
+<div class="fields"><label>월 예산 (원)<input class="cursor-interaction" data-budget type="number" min="0" max="1000000" step="1000" value="100000"></label><label>현재 리그<select class="cursor-interaction" data-league><option value="450">세미프로</option><option value="700" selected>프로</option><option value="1400">월드</option></select></label></div>
+<label class="toggle cursor-interaction"><input data-awaken type="checkbox">5성 각성 재료를 우선할래요</label>
+<div class="result" aria-live="polite"><div class="kicker">예상 주간 다이아</div><div class="big" data-total></div><div class="meta"><span data-spend></span><span data-left></span></div><div class="note" data-breakdown></div></div>
+<h3>예산 안에서 추천하는 조합</h3><div data-items></div>
+<p class="note">2026-11-01 통합 자료 기준 추정치<br>리그 승률 50% · 랭킹전 올스타 3티어 · 한 달 4.3주<br>월간 상품은 4.3주로 나눈 평균이며 실제 주간 지급량은 다를 수 있습니다. 프리미엄은 리그 중위권 순위 다이아의 +30%만 합산합니다. 골드·카드·뽑기권은 다이아 합계에 포함하지 않습니다. 첫 구매·광고 제거는 조합에서 제외.</p>
+</div></div></section>
+<section id="experience-panel" role="tabpanel" aria-labelledby="experience-tab" hidden>
+  <div class="xp-intro"><h2>경험치 계산기</h2><p>목표 레벨을 정하고, 육성 방법을 비교해 보세요.</p></div>
+  <section class="xp-box" aria-labelledby="xp-player-heading">
+    <div class="xp-section-head"><h3 id="xp-player-heading">선수와 목표 레벨</h3><label class="xp-grade" for="xp-star"><span class="sr-label">대상 선수 등급</span><select id="xp-star" aria-label="대상 선수 등급"><option value="3">3성 선수</option><option value="4">4성 선수</option><option value="5" selected>5성 선수</option></select></label></div>
+    <div class="xp-levels"><label for="xp-current">현재 레벨<input id="xp-current" type="number" min="1" max="29" step="1" value="1" inputmode="numeric"></label><span class="xp-arrow" aria-hidden="true">→</span><label for="xp-target">목표 레벨<input id="xp-target" type="number" min="2" max="30" step="1" value="20" inputmode="numeric"></label></div>
+    <details class="xp-optional"><summary>이미 쌓인 경험치 · 전수 후 시작</summary><div class="xp-optional-body"><label for="xp-earned">현재 레벨에서 쌓인 EXP<input id="xp-earned" type="number" min="0" step="any" value="0" inputmode="decimal"></label><div id="xp-transfers" class="xp-transfers"><div class="xp-transfer-title">경험 전수 후 시작 <span>Lv30 은퇴 선수 실측 예시 · 보장값 아님</span></div><button class="btn" type="button" data-transfer="18">5성 은퇴자 → Lv18</button><button class="btn" type="button" data-transfer="15">4성 은퇴자 → Lv15</button><p class="xp-hint">받는 5성 선수가 Lv1에서 시작한 예시입니다. 실제 전수량은 은퇴 선수의 누적 EXP·포텐셜·정점 OVR·수상 이력과 골드/다이아 방식에 따라 달라집니다. 대상은 30세 이하·Lv10 이하이며 은퇴 선수 정점 OVR보다 현재 OVR이 낮아야 합니다. 버튼은 비교용 시작 레벨과 쌓인 EXP만 바꿉니다.</p></div></div></details>
+  </section>
+  <section class="xp-box xp-method-box" aria-labelledby="xp-method-heading">
+    <h3 id="xp-method-heading">육성 방법</h3>
+    <label for="xp-method"><span class="sr-label">경험치 획득 방법</span><select id="xp-method" aria-label="경험치 획득 방법"><optgroup label="특별훈련 재료"><option value="0">1성 카드</option><option value="1">2성 카드</option><option value="2" selected>3성 카드</option><option value="3">4성 카드</option><option value="4">5성 카드</option><option value="5">2000 경험치권</option></optgroup><optgroup label="훈련·경기"><option value="study">유학</option><option value="game">2군 경기</option></optgroup></select></label>
+    <label class="xp-premium-label" for="xp-premium"><input id="xp-premium" type="checkbox" checked><span>프리미엄 시즌권 사용 중</span></label>
+    <p id="xp-card-note" class="xp-hint">등급 보정은 제공 가이드 비율 사용 · 카드의 프리미엄 영향은 미확인이라 미적용. 같은 등급 카드는 각성 재료 가치도 먼저 확인하세요.</p>
+    <div id="xp-study-inputs" class="xp-method-extra" hidden><label for="xp-study-exp">유학 1회 경험치<input id="xp-study-exp" type="number" min="0.01" step="any" value="898" inputmode="decimal"></label><p id="xp-study-status" class="xp-hint"></p><details class="xp-small-details"><summary>직접 수정할 때 참고</summary><p>프리미엄 체크를 바꾸면 898 / 816으로 전환됩니다. 입력값에는 별도 배율을 더하지 않습니다. 기본 12시간·하루 2회 기준이며, 클럽 가속·광고 단축 등은 일수에 반영하지 않습니다. 898 EXP는 한 사례의 실측이므로 리그·선수 조건에 맞게 수정하세요.</p></details></div>
+    <div id="xp-game-inputs" class="xp-method-extra" hidden><div class="xp-fields"><label for="xp-role">2군 포지션<select id="xp-role"><option value="batter">야수</option><option value="starter">선발</option><option value="bullpen">불펜</option></select></label><label for="xp-game-exp">1회 기본 경험치<input id="xp-game-exp" type="number" min="0.01" step="any" value="160" inputmode="decimal"></label><label id="xp-bullpen-field" for="xp-bullpen" hidden>하루 등판 횟수<input id="xp-bullpen" type="number" min="1" step="1" value="2" inputmode="numeric"></label></div><p id="xp-game-status" class="xp-hint"></p><p class="xp-hint">기본 EXP는 추정치입니다. 프리미엄 적용 전 수치로 수정하세요.</p><details class="xp-small-details"><summary>경기 일정·기본값</summary><p>야수 160 · 선발 400 · 불펜 90 EXP는 다른 이용자의 기록으로 추정한 값입니다. 월~금 하루 9경기, 주 45경기 · 토·일 제외.</p></details></div>
+  </section>
+  <p id="xp-error" class="warn" role="alert" hidden></p>
+  <div id="xp-outputs">
+    <section class="result xp-result" aria-live="polite">
+      <div class="xp-result-top"><span id="xp-result-method">3성 카드</span><span id="xp-range"></span></div>
+      <dl class="xp-key-metrics"><div><dt id="xp-count-label">필요 재료</dt><dd id="xp-count"></dd></div><div id="xp-gold-field"><dt>총 골드</dt><dd id="xp-gold"></dd></div><div id="xp-days-field" hidden><dt id="xp-days-label">필요 일수</dt><dd id="xp-days"></dd></div></dl>
+      <div class="xp-result-foot"><span>목표까지 필요한 경험치</span><strong id="xp-needed"></strong><span id="xp-weeks-field" hidden>주 수 환산 <strong id="xp-weeks"></strong></span></div>
+      <details class="xp-result-details"><summary>계산 세부값</summary><dl class="xp-sub-metrics"><div><dt>1장·1회 실제 경험치</dt><dd id="xp-actual"></dd></div><div><dt>남는 경험치</dt><dd id="xp-excess"></dd></div></dl><p id="xp-detail"></p></details>
+      <p id="xp-game-warning" class="xp-hint" hidden>2군 등록 중엔 유학 불가.<br>이번 주 1군 출전 선수는 2군 불가.</p>
+    </section>
+    <details id="xp-comparison" class="xp-comparison"><summary>다른 육성 방법과 비교 <span>6가지 방법</span></summary><div class="tablewrap"><table class="ref xp-table"><caption>같은 레벨 구간 · 카드·유학·2군 야수</caption><thead><tr><th scope="col">방법</th><th scope="col">장수·횟수</th><th scope="col">골드</th><th scope="col">골드/EXP</th><th scope="col">일수</th></tr></thead><tbody id="xp-rows"></tbody></table></div><p id="xp-comparison-note"></p></details>
+  </div>
+</section>
+<section id="deck-panel" role="tabpanel" aria-labelledby="deck-tab" hidden></section>
+<section id="stats-panel" role="tabpanel" aria-labelledby="stats-tab" hidden>
+  <div class="st-intro"><h2>스탯 미리보기</h2><p>현재 레벨과 목표 레벨을 정하고, 예상 능력치와 훈련 방향을 확인하세요.</p></div>
+  <div class="st-controls"><div class="seg" role="group" aria-label="스탯 선수 유형"><button type="button" data-st-role="batter" aria-pressed="true">타자</button><button type="button" data-st-role="pitcher" aria-pressed="false">투수</button></div><span id="st-progress" class="st-progress" aria-live="polite"></span></div>
+  <section class="st-group st-settings" aria-label="레벨과 역할 설정"><div class="st-grid"><label for="st-current">현재 레벨<input id="st-current" type="number" min="1" max="30" step="1" inputmode="numeric" value="1"></label><label for="st-target">목표 레벨<input id="st-target" type="number" min="1" max="30" step="1" inputmode="numeric" value="30"></label><label class="st-wide" for="st-profile">포지션·보직<select id="st-profile"></select></label><label class="st-wide" id="st-main-field" for="st-main" hidden>훈련 추천에 볼 주무기 구종<select id="st-main"></select></label></div></section>
+  <p id="st-level-error" class="warn" role="alert" hidden></p>
+  <div class="st-rule" id="st-rule"><span id="st-rule-title"></span><strong id="st-rule-gain"></strong><span class="st-hint st-wide" style="margin:0">레벨업 1회당 +1로 계산합니다. 기본 상한·코치 버프·개인훈련 추가분은 별도 반영하지 않은 미리보기입니다.</span><a class="st-training-link" href="#st-training">훈련 추천 보기 ↓</a></div>
+  <div id="st-batter" class="st-body"></div><div id="st-pitcher" class="st-body" hidden></div>
+  <section id="st-training" class="st-group st-training" aria-labelledby="st-training-heading"><div class="st-group-head"><h3 id="st-training-heading">훈련 방향 추천</h3><span>추정 · 입력값 기준</span></div><p id="st-reco-status" class="st-hint" aria-live="polite"></p><p class="st-hint"><strong>개인훈련은 원하는 능력치를 지정할 수 없습니다.</strong> 무작위 능력치 2개가 각각 +1 오릅니다. 아래 순위는 셔플 결과를 고를 때 참고하는 보완 우선순위입니다.</p><ol id="st-recommendations" class="st-recommendations"></ol><p id="st-reco-lower" class="st-hint"></p><p id="st-reco-note" class="st-hint"></p><p id="st-reco-error" class="warn" role="alert" hidden></p>
+    <section class="st-camp"><h4>전지훈련은 이렇게</h4><p id="st-camp-plan" class="st-hint"></p><p class="st-hint">보관함 제외 로스터 전체 대상 · 1회 대상 인원 × 700골드 · 비시즌 기본 5회, 베이직 사용 시 7회. 횟수는 타자·투수 캠프가 함께 사용합니다.</p></section><details class="st-reco-context"><summary>상한·훈련 횟수로 추천 보완 <span>선택 입력</span></summary><p class="st-hint">기본 상한은 추천 대상에서 상한 도달 항목을 거르는 데만 사용합니다. 위 스탯 미리보기에는 적용하지 않습니다. 기본 능력치와 코치 버프·개인훈련 (+n)은 구분해 확인하세요.</p><div class="st-grid"><label class="st-wide" for="st-cap">추천용 기본 성장 상한<input id="st-cap" type="number" min="1" step="any" inputmode="decimal" placeholder="미확인"></label><label for="st-used">완료한 훈련 횟수<input id="st-used" type="number" min="0" step="1" inputmode="numeric" placeholder="미확인"></label><label for="st-limit">현재 훈련 한도<input id="st-limit" type="number" min="0" step="1" inputmode="numeric" placeholder="미확인"></label></div><p class="st-hint">개인훈련 기본 한도 50회. 5성은 돌파권 1장당 +5회: 0각 최대 55 / 1각 60 / 2각 65 / 3각 70회. 각성만으로 늘어나지 않으며 돌파권 사용이 필요합니다. 다른 등급에 이 표를 적용하지 않습니다.</p></details>
+    <details class="st-reco-guide"><summary>추천은 어떻게 정하나요?</summary><p>포지션·보직별 핵심 능력치 중 입력된 목표 스탯이 낮은 순서로 최대 3개를 제안합니다. 입력하지 않은 능력치는 판단하지 않습니다. 투수는 선택한 주무기의 구위·제구를 함께 봅니다. 전지훈련은 개인훈련과 별개로 안내하며, 입력한 상한에 목표 레벨에서 닿는 타격 항목은 정밀 후보에서 제외합니다.</p><p>제공된 야구천재 통합 자료(2026-11-01 정리본)를 참고한 방향 추천입니다. 낮은 값부터 정렬하는 방식은 이 계산기의 추정 기준이며 공식 훈련 효율·임계값이 아닙니다. 실제 훈련 전 상한 여유와 남은 횟수를 확인하세요.</p><p>56회차 이후 개인훈련은 기본 상한과 별도로 누적됩니다. 훈련 한도 자체가 늘어나는 뜻은 아닙니다.</p></details>
+  </section>
+  <div class="st-clear-row"><button id="st-clear" type="button" class="btn">현재 유형 입력 비우기</button></div>
+</section>
+</div>
+<script>
+const DATA={"타자":[["전설의 선수","P",10.1,"공통"],["프랜차이즈","P",6.9,"공통"],["MVP","P",5.6,"공통"],["슈퍼스타","G",4.3,"공통"],["클러치 마스터","P",3.6,"공통"],["5툴 플레이어","P",3.4,"야수"],["안타 제조기","G",3.0,"야수"],["판도 전환","P",3.0,"공통"],["불굴의 정신","P",3.0,"공통"],["타석 지배","G",2.9,"야수"],["종반 영웅","P",2.9,"공통"],["라이벌리","G",2.6,"공통"],["장타 제조","G",2.5,"야수"],["강한 타구","S",2.4,"야수"],["멘탈 요새","G",2.4,"야수"],["변화구 킬러","G",2.4,"야수"],["정신력 거인","G",2.4,"공통"],["담장 위협","G",1.9,"야수"],["대기만성","G",1.9,"공통"],["공포의 타자","P",1.8,"야수"],["클러치 타자","G",1.8,"야수"],["파워 서지","S",1.7,"야수"],["끝내기 영웅","P",1.6,"야수"],["좌우 적응","S",1.5,"공통"],["스피드 킹","P",1.4,"야수"],["갭 공략","S",1.4,"야수"],["접전 강자","S",1.4,"공통"],["수비 장인","G",1.3,"야수"],["득점권 집중","S",1.3,"야수"],["끈질긴 타격","B",1.3,"야수"],["연승 기운","G",1.2,"공통"],["2아웃 매직","S",1.2,"공통"],["노련함","B",1.2,"공통"],["호안","S",1.1,"야수"],["인내심","S",1.1,"야수"],["불사신","P",1.1,"공통"],["도루왕","G",1.0,"야수"],["후반 강타","S",1.0,"야수"],["빅게임","G",1.0,"공통"],["중반 지배","S",1.0,"공통"],["라이벌 의식","B",1.0,"공통"],["승부사","S",0.9,"공통"],["홈 어드밴티지","B",0.9,"공통"],["원정 투사","B",0.9,"공통"],["결정적 순간","G",0.9,"공통"],["초구 공격","B",0.7,"야수"],["만루포","P",0.7,"야수"],["주루 본능","G",0.6,"야수"],["초기 적응","B",0.6,"야수"],["병살 파쇄","S",0.6,"야수"],["철벽","P",0.6,"공통"],["초반 강자","B",0.6,"공통"],["라이너 성향","B",0.5,"야수"],["무결체","G",0.5,"공통"],["풀카운트 집중","G",0.5,"공통"],["불굴","S",0.5,"공통"],["쾌속 질주","S",0.4,"야수"],["내야 질주","B",0.4,"야수"],["리드 주자","S",0.4,"야수"],["집중력","B",0.4,"공통"],["만루 지배","G",0.4,"공통"],["멘탈 방패","S",0.4,"공통"],["역전의 사나이","S",0.3,"공통"],["빠른 출발","B",0.3,"공통"],["천재","P",0.3,"공통"],["젊은 패기","B",0.3,"공통"],["뜬공 타격","B",0.2,"야수"],["밀어치기","B",0.2,"야수"],["철인","S",0.2,"공통"],["꾸준함","S",0.2,"공통"],["태그업 본능","B",0.1,"야수"],["대주자 기질","B",0.1,"야수"],["번트 달인","B",0.1,"야수"],["강철 체력","B",0.1,"공통"],["냉정함","B",0.1,"공통"]],"선발":[["난공불락","P",12.6,"투수"],["전설의 선수","P",10.9,"공통"],["삼진 머신","P",8.4,"투수"],["프랜차이즈","P",6.9,"공통"],["MVP","P",6.7,"공통"],["이닝 파괴자","P",6.6,"투수"],["에이스","G",6.6,"투수"],["클러치 마스터","P",6.5,"공통"],["슈퍼스타","G",4.9,"공통"],["완벽 제구","P",4.4,"투수"],["불사신","P",4.4,"공통"],["철벽","P",3.2,"공통"],["헛스윙 유도","G",3.0,"투수"],["컨택 살인","G",3.0,"투수"],["철완","G",3.0,"투수"],["판도 전환","P",3.0,"공통"],["불굴의 정신","P",3.0,"공통"],["홈런 봉쇄","G",2.5,"투수"],["멘탈 요새","G",2.4,"투수"],["기만술","G",2.4,"투수"],["정신력 거인","G",2.4,"공통"],["이닝 이터","S",2.1,"투수"],["병살 머신","G",1.9,"투수"],["저구 장인","S",1.8,"투수"],["파워 봉쇄","S",1.7,"투수"],["승부사","S",1.6,"공통"],["정신력 우위","S",1.5,"투수"],["좌우 적응","S",1.5,"공통"],["강속구+","S",1.4,"투수"],["라이벌리","G",1.4,"공통"],["접전 강자","S",1.4,"공통"],["위기 관리","S",1.3,"투수"],["압박 투구","G",1.2,"투수"],["탈삼진","S",1.2,"투수"],["병살 유도","S",1.2,"투수"],["연승 기운","G",1.2,"공통"],["2아웃 매직","S",1.2,"공통"],["노련함","B",1.2,"공통"],["대기만성","G",1.0,"공통"],["중반 지배","S",1.0,"공통"],["배합의 달인","S",0.9,"투수"],["홈 어드밴티지","B",0.9,"공통"],["원정 투사","B",0.9,"공통"],["결정적 순간","G",0.9,"공통"],["종반 영웅","P",0.8,"공통"],["초반 강자","B",0.8,"공통"],["체력 절약","B",0.7,"투수"],["제구 장인","B",0.7,"투수"],["변화구 연마","B",0.6,"투수"],["지배적 마무리","P",0.5,"투수"],["선제 스트라이크","B",0.5,"투수"],["땅볼 유도","B",0.5,"투수"],["라이벌 의식","B",0.5,"공통"],["무결체","G",0.5,"공통"],["풀카운트 집중","G",0.5,"공통"],["불굴","S",0.5,"공통"],["빠른 회복","S",0.4,"투수"],["팝업 유도","B",0.4,"투수"],["집중력","B",0.4,"공통"],["만루 지배","G",0.4,"공통"],["멘탈 방패","S",0.4,"공통"],["빠른 출발","B",0.4,"공통"],["마무리 본능","G",0.3,"투수"],["빅게임","G",0.3,"공통"],["역전의 사나이","S",0.3,"공통"],["천재","P",0.3,"공통"],["젊은 패기","B",0.3,"공통"],["견제 달인","B",0.2,"투수"],["철인","S",0.2,"공통"],["꾸준함","S",0.2,"공통"],["퀵모션","B",0.1,"투수"],["폭투 억제","B",0.1,"투수"],["강철 체력","B",0.1,"공통"],["냉정함","B",0.1,"공통"],["불펜 점화","B",0,"투수"]],"불펜":[["난공불락","P",12.6,"투수"],["전설의 선수","P",11.4,"공통"],["삼진 머신","P",8.4,"투수"],["MVP","P",7.5,"공통"],["클러치 마스터","P",7.5,"공통"],["프랜차이즈","P",6.9,"공통"],["에이스","G",6.6,"투수"],["종반 영웅","P",6.0,"공통"],["슈퍼스타","G",5.2,"공통"],["대기만성","G",4.8,"공통"],["완벽 제구","P",4.4,"투수"],["이닝 파괴자","P",3.8,"투수"],["지배적 마무리","P",3.0,"투수"],["헛스윙 유도","G",3.0,"투수"],["컨택 살인","G",3.0,"투수"],["판도 전환","P",3.0,"공통"],["불굴의 정신","P",3.0,"공통"],["홈런 봉쇄","G",2.5,"투수"],["불사신","P",2.5,"공통"],["멘탈 요새","G",2.4,"투수"],["정신력 거인","G",2.4,"공통"],["승부사","S",2.2,"공통"],["위기 관리","S",2.0,"투수"],["병살 머신","G",1.9,"투수"],["접전 강자","S",1.9,"공통"],["저구 장인","S",1.8,"투수"],["불펜 점화","B",1.8,"투수"],["압박 투구","G",1.8,"투수"],["파워 봉쇄","S",1.7,"투수"],["마무리 본능","G",1.5,"투수"],["정신력 우위","S",1.5,"투수"],["철벽","P",1.5,"공통"],["좌우 적응","S",1.5,"공통"],["빅게임","G",1.5,"공통"],["강속구+","S",1.4,"투수"],["라이벌리","G",1.4,"공통"],["탈삼진","S",1.2,"투수"],["병살 유도","S",1.2,"투수"],["빠른 회복","S",1.2,"투수"],["연승 기운","G",1.2,"공통"],["2아웃 매직","S",1.2,"공통"],["노련함","B",1.2,"공통"],["배합의 달인","S",0.9,"투수"],["홈 어드밴티지","B",0.9,"공통"],["원정 투사","B",0.9,"공통"],["결정적 순간","G",0.9,"공통"],["체력 절약","B",0.7,"투수"],["제구 장인","B",0.7,"투수"],["철완","G",0.6,"투수"],["기만술","G",0.6,"투수"],["변화구 연마","B",0.6,"투수"],["중반 지배","S",0.6,"공통"],["이닝 이터","S",0.5,"투수"],["선제 스트라이크","B",0.5,"투수"],["땅볼 유도","B",0.5,"투수"],["라이벌 의식","B",0.5,"공통"],["무결체","G",0.5,"공통"],["풀카운트 집중","G",0.5,"공통"],["불굴","S",0.5,"공통"],["팝업 유도","B",0.4,"투수"],["집중력","B",0.4,"공통"],["만루 지배","G",0.4,"공통"],["멘탈 방패","S",0.4,"공통"],["역전의 사나이","S",0.3,"공통"],["천재","P",0.3,"공통"],["젊은 패기","B",0.3,"공통"],["견제 달인","B",0.2,"투수"],["철인","S",0.2,"공통"],["꾸준함","S",0.2,"공통"],["퀵모션","B",0.1,"투수"],["폭투 억제","B",0.1,"투수"],["강철 체력","B",0.1,"공통"],["냉정함","B",0.1,"공통"],["초반 강자","B",0,"공통"],["빠른 출발","B",0,"공통"]],"마무리":[["지배적 마무리","P",15.6,"투수"],["난공불락","P",12.6,"투수"],["종반 영웅","P",12.0,"공통"],["전설의 선수","P",11.8,"공통"],["클러치 마스터","P",10.0,"공통"],["MVP","P",9.7,"공통"],["삼진 머신","P",8.4,"투수"],["마무리 본능","G",7.2,"투수"],["프랜차이즈","P",6.9,"공통"],["에이스","G",6.6,"투수"],["빅게임","G",6.0,"공통"],["슈퍼스타","G",5.5,"공통"],["대기만성","G",4.8,"공통"],["완벽 제구","P",4.4,"투수"],["이닝 파괴자","P",3.8,"투수"],["승부사","S",3.6,"공통"],["위기 관리","S",3.2,"투수"],["헛스윙 유도","G",3.0,"투수"],["컨택 살인","G",3.0,"투수"],["판도 전환","P",3.0,"공통"],["불굴의 정신","P",3.0,"공통"],["홈런 봉쇄","G",2.5,"투수"],["불사신","P",2.5,"공통"],["멘탈 요새","G",2.4,"투수"],["압박 투구","G",2.4,"투수"],["정신력 거인","G",2.4,"공통"],["병살 머신","G",1.9,"투수"],["접전 강자","S",1.9,"공통"],["저구 장인","S",1.8,"투수"],["불펜 점화","B",1.8,"투수"],["파워 봉쇄","S",1.7,"투수"],["정신력 우위","S",1.5,"투수"],["철벽","P",1.5,"공통"],["좌우 적응","S",1.5,"공통"],["강속구+","S",1.4,"투수"],["라이벌리","G",1.4,"공통"],["탈삼진","S",1.2,"투수"],["병살 유도","S",1.2,"투수"],["빠른 회복","S",1.2,"투수"],["연승 기운","G",1.2,"공통"],["2아웃 매직","S",1.2,"공통"],["노련함","B",1.2,"공통"],["배합의 달인","S",0.9,"투수"],["홈 어드밴티지","B",0.9,"공통"],["원정 투사","B",0.9,"공통"],["결정적 순간","G",0.9,"공통"],["체력 절약","B",0.7,"투수"],["제구 장인","B",0.7,"투수"],["철완","G",0.6,"투수"],["기만술","G",0.6,"투수"],["변화구 연마","B",0.6,"투수"],["이닝 이터","S",0.5,"투수"],["선제 스트라이크","B",0.5,"투수"],["땅볼 유도","B",0.5,"투수"],["라이벌 의식","B",0.5,"공통"],["무결체","G",0.5,"공통"],["풀카운트 집중","G",0.5,"공통"],["불굴","S",0.5,"공통"],["팝업 유도","B",0.4,"투수"],["집중력","B",0.4,"공통"],["만루 지배","G",0.4,"공통"],["멘탈 방패","S",0.4,"공통"],["역전의 사나이","S",0.3,"공통"],["천재","P",0.3,"공통"],["젊은 패기","B",0.3,"공통"],["견제 달인","B",0.2,"투수"],["철인","S",0.2,"공통"],["꾸준함","S",0.2,"공통"],["퀵모션","B",0.1,"투수"],["폭투 억제","B",0.1,"투수"],["강철 체력","B",0.1,"공통"],["냉정함","B",0.1,"공통"],["중반 지배","S",0,"공통"],["초반 강자","B",0,"공통"],["빠른 출발","B",0,"공통"]]};
+const PROB={5:{P:.20,G:.40,S:.30,B:.10},4:{P:.05,G:.25,S:.40,B:.30}};
+const GN={P:'플래티넘',G:'골드',S:'실버',B:'브론즈'};
+const ENH=[['','강화 없음',0],['D','강화 D',.075],['C','강화 C',.2],['B','강화 B',.3],['A','강화 A',.4],['S','강화 S',.475]];
+const EX={'타자':['전설의 선수','슈퍼스타','안타 제조기'],'선발':['MVP','홈런 봉쇄','정신력 우위'],'불펜':['전설의 선수','컨택 살인','철완'],'마무리':['지배적 마무리','빅게임','탈삼진']};
+let star=5, role='타자', picks={};
+const $=id=>document.getElementById(id);
+function list(){return DATA[role]}
+function val(name){const t=list().find(x=>x[0]===name);return t?t[2]:0}
+function grade(name){const t=list().find(x=>x[0]===name);return t?t[1]:null}
+function fmt(v){return (v>=0?'+':'')+v.toFixed(1)}
+
+function bindSearch(input){
+  const id=input.dataset.slot, box=$(id+'-suggestions');let matches=[],active=-1;
+  const close=()=>{box.hidden=true;input.setAttribute('aria-expanded','false');input.removeAttribute('aria-activedescendant')};
+  const commit=name=>{picks[id]=picks[id]||{n:'',e:''};picks[id].n=name;window._ex=false;render();$(id+'-n').focus()};
+  function draw(){
+    const q=input.value.replace(/\s/g,'').toLocaleLowerCase();
+    matches=list().filter(t=>t[0].replace(/\s/g,'').toLocaleLowerCase().includes(q));active=-1;
+    box.innerHTML=matches.length?matches.map((t,i)=>'<div class="suggestion" role="option" aria-selected="false" id="'+id+'-opt-'+i+'" data-index="'+i+'">'+t[0]+'<small>'+GN[t[1]]+' · '+fmt(t[2])+' · '+t[3]+'</small></div>').join(''):'<div class="no-match">검색 결과가 없습니다</div>';
+    box.hidden=false;input.setAttribute('aria-expanded','true');input.removeAttribute('aria-activedescendant');
+  }
+  input.addEventListener('focus',()=>input.select());
+  input.addEventListener('click',draw);
+  input.addEventListener('input',()=>{draw();if(!input.value){picks[id]=picks[id]||{n:'',e:''};picks[id].n='';window._ex=false;calc();input.closest('.slot').querySelector('.chip')?.remove();$('exnote').textContent=''}});
+  input.addEventListener('keydown',e=>{
+    if(e.isComposing)return;
+    if(e.key==='Escape'){input.value=picks[id]?.n||'';close();return}
+    if(e.key==='ArrowDown'||e.key==='ArrowUp'){
+      e.preventDefault();if(box.hidden)draw();if(!matches.length)return;
+      active=(active+(e.key==='ArrowDown'?1:-1)+matches.length)%matches.length;
+      [...box.querySelectorAll('[role="option"]')].forEach((el,i)=>el.setAttribute('aria-selected',i===active));
+      input.setAttribute('aria-activedescendant',id+'-opt-'+active);$(id+'-opt-'+active).scrollIntoView({block:'nearest'});
+    }else if(e.key==='Enter'&&!box.hidden&&matches.length){e.preventDefault();commit(matches[Math.max(active,0)][0])}
+  });
+  box.addEventListener('pointerdown',e=>{const row=e.target.closest('[data-index]');if(row){e.preventDefault();commit(matches[+row.dataset.index][0])}});
+  input.addEventListener('blur',()=>{input.value=picks[id]?.n||'';close()});
+}
+function slotHTML(i,awk){
+  const id=awk?'awk':'s'+i, p=picks[id]||{n:'',e:''};
+  const enh=ENH.map(e=>`<option value="${e[0]}"${e[0]===p.e?' selected':''}>${e[1]}</option>`).join('');
+  const g=grade(p.n);
+  const chip=p.n?`<span class="chip ${g}">${GN[g]} <b>${fmt(val(p.n)*(awk?1:1+(ENH.find(e=>e[0]===p.e)||ENH[0])[2]))}</b></span>`:'';
+  return `<div class="slot${awk?' awk':''}"><div class="head"><span>${awk?'각성 보너스칸 (선택)':(i+1)+'번 칸'}</span>${chip}</div>
+    <div class="searchbox"><input id="${id}-n" data-slot="${id}" value="${p.n}" placeholder="특성 이름 검색" aria-label="${awk?'각성칸':(i+1)+'번 칸'} 특성" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="${id}-suggestions" autocomplete="off"><div class="suggestions" id="${id}-suggestions" role="listbox" aria-label="특성 검색 결과" hidden></div></div>
+    ${awk?'<span class="note">각성칸은 강화 불가</span>':`<select id="${id}-e" class="enh" aria-label="강화 등급">${enh}</select>`}</div>`;
+}
+function render(){
+  const k=star===5?3:2;
+  let h='';for(let i=0;i<k;i++)h+=slotHTML(i,false);
+  if(star===5)h+=slotHTML(0,true);
+  h+=`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span class="ex" id="exnote"></span><button type="button" class="btn" id="clear">모두 비우기</button></div>`;
+  $('slots').innerHTML=h;
+  $('slots').querySelectorAll('select').forEach(s=>s.addEventListener('change',e=>{
+    const [id,part]=e.target.id.split('-');picks[id]=picks[id]||{n:'',e:''};picks[id][part]=e.target.value;window._ex=false;render();
+  }));
+  $('slots').querySelectorAll('input[data-slot]').forEach(bindSearch);
+  $('clear').onclick=()=>{picks={};window._ex=false;render()};
+  $('exnote').textContent=window._ex?'예시 조합입니다. 내 선수 특성으로 바꿔 보세요.':'';
+  calc();
+}
+const cache={};
+function dist(){
+  const key=star+role; if(cache[key])return cache[key];
+  const k=star===5?3:2, pool={};
+  for(const t of list()){(pool[t[1]]=pool[t[1]]||[]).push(t)}
+  const gs=['P','G','S','B'], cum=[];let c=0;for(const g of gs){c+=PROB[star][g];cum.push(c)}
+  const N=40000, out=new Float64Array(N);
+  for(let n=0;n<N;n++){
+    let s=0,cnt=0,plat=0;const used=new Set();
+    while(cnt<k){
+      const r=Math.random()*c;let gi=0;while(r>cum[gi])gi++;const g=gs[gi];
+      if(g==='P'&&plat)continue;
+      const arr=pool[g],t=arr[Math.floor(Math.random()*arr.length)];
+      if(used.has(t[0]))continue;used.add(t[0]);if(g==='P')plat++;s+=t[2];cnt++;
+    }
+    out[n]=s;
+  }
+  out.sort();
+  const q=p=>out[Math.min(N-1,Math.floor(p*N))];
+  return cache[key]={arr:out,N,avg:out.reduce((a,b)=>a+b,0)/N,p90:q(.9),p95:q(.95),p97:q(.97),p99:q(.99),max:out[N-1]};
+}
+function calc(){
+  const k=star===5?3:2, d=dist();
+  let sum=0,names=[],plats=0,filled=0;
+  for(let i=0;i<k;i++){const p=picks['s'+i];if(p&&p.n){filled++;names.push(p.n);if(grade(p.n)==='P')plats++;sum+=val(p.n)*(1+ENH.find(e=>e[0]===(p.e||''))[2])}}
+  const a=picks.awk; let awk=0; if(star===5&&a&&a.n) awk=val(a.n);
+  $('total').textContent=fmt(sum);
+  // percentile
+  let lo=0,hi=d.N;while(lo<hi){const m=(lo+hi)>>1;if(d.arr[m]<sum-1e-9)lo=m+1;else hi=m}
+  const top=Math.max(0.1,(d.N-lo)/d.N*100);
+  let upper=lo;while(upper<d.N&&d.arr[upper]<=sum+1e-9)upper++;const improve=(d.N-upper)/d.N*100;const improveText=improve===0?'4만 회 표본 내 0회 (실제 확률 0%를 뜻하지 않음)':'약 '+improve.toFixed(1)+'%';
+  const v=$('verdict'),why=$('why');
+  if(!filled){$('pct').textContent='특성을 골라 주세요';v.textContent='-';v.className='verdict v-mid';why.textContent='';}
+  else if(filled<k){$('pct').textContent=`${filled}/${k}칸 입력 중`;v.textContent='입력 중';v.className='verdict v-mid';why.textContent='메인 칸을 모두 입력하면 리롤 방향을 표시합니다.';}
+  else{
+    $('pct').textContent=filled<k?`${filled}/${k}칸 입력 중`:`상위 약 ${top<1?top.toFixed(1):Math.round(top)}%`;
+    if(sum>=d.p90){v.textContent='졸업 · 유지';v.className='verdict v-top';why.textContent=`추정 모델 상위 10%(${fmt(d.p90)}) 이상입니다. 강화 없는 새 조합이 현재 점수를 넘은 추정 결과: ${improveText}.`}
+    else if(sum>d.avg){v.textContent='유지 권장';v.className='verdict v-mid';why.textContent=`추정 모델 평균(${fmt(d.avg)})보다 높습니다. 강화 없는 새 조합이 현재 점수를 넘은 추정 결과: ${improveText}.`}
+    else{v.textContent='리롤 추천';v.className='verdict v-bad';why.textContent=`추정 모델 평균(${fmt(d.avg)}) 이하입니다. 강화 없는 새 조합이 현재 점수를 넘은 추정 결과: ${improveText}. 리롤 비용과 강화 초기화를 함께 고려하세요.`}
+  }
+  // warnings
+  const w=[];const dup=names.filter((n,i)=>names.indexOf(n)!==i);
+  if(dup.length)w.push(`같은 특성이 두 번 들어갔습니다: ${dup.join(', ')}`);
+  if(plats>1)w.push('메인 1~3번 칸에는 플래티넘이 1개까지만 붙습니다.');
+  if(star===5&&a&&a.n&&names.includes(a.n))w.push('각성칸은 메인 칸과 겹치지 않는 특성으로만 나옵니다.');
+  if(w.length){v.textContent='입력 확인';v.className='verdict v-bad';why.textContent='가능한 특성 조합으로 수정한 뒤 판단해 주세요.';}
+  $('reroll-cost').textContent=star===5?'5성 메인 리롤: 100다이아':'4성 메인 리롤: 50다이아 또는 30,000골드';
+  $('warn').hidden=!w.length;$('warn').textContent=w.join(' ');
+  $('awkRows').hidden=!(star===5&&a&&a.n);$('grand').textContent=fmt(sum+awk);
+  // scale
+  const max=Math.max(d.max,sum)*1.02, sc=$('scale');
+  const pos=x=>Math.min(100,Math.max(0,x/max*100));
+  sc.innerHTML='<div class="track"></div>'+[['평균',d.avg],['10%',d.p90],['1%',d.p99]].map(([l,x])=>`<div class="tick" style="left:${pos(x)}%"><i>${l} ${x.toFixed(1)}</i></div>`).join('')+`<div class="me" style="left:${pos(sum)}%"></div>`;
+  // ref table
+  const rows=[['평균',d.avg],['상위 10% · 졸업',d.p90],['상위 5%',d.p95],['상위 3%',d.p97],['상위 1%',d.p99]];
+  $('ref').innerHTML=`<tr><th>${star}성 ${role} ${k}칸</th><th>가산점</th></tr>`+rows.map(([l,x])=>`<tr class="${filled&&sum>=x?'on':''}"><td>${l}</td><td>${fmt(x)}</td></tr>`).join('');
+}
+function setSeg(segId,valueSetter){
+  $(segId).querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{
+    $(segId).querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b));valueSetter(b.dataset.v);
+    // drop picks that don't exist in this role
+    for(const id in picks){if(picks[id].n&&!list().some(t=>t[0]===picks[id].n))picks[id].n=''}
+    render();
+  }));
+}
+setSeg('starSeg',v=>{star=+v; if(star===4){delete picks.s2;delete picks.awk}});
+setSeg('roleSeg',v=>{role=v; if(window._ex)loadEx()});
+function loadEx(){picks={};EX[role].slice(0,star===5?3:2).forEach((n,i)=>picks['s'+i]={n,e:''});window._ex=true}
+loadEx();render();
+</script>
+
+<script>
+
+(()=>{const root=document.getElementById('budget-demo');const q=s=>root.querySelector(s);const money=n=>'₩'+n.toLocaleString('ko-KR');
+const products=[{n:'다이아 패스',p:9900,d:3400/4.3,t:'30일 총 3,400다이아 · 매일 직접 수령'},{n:'시즌패스 베이직',p:5900,d:0,t:'훈련 슬롯 +2(9/14 개편), 유학 슬롯 +1 · 전지훈련 +2회'},{n:'월간 재화 세트',p:59000,d:5900/4.3,t:'5,900다이아 + 10연권 20회 + 골드 20만 + 경험치권 1 / 월'},{n:'월간 각성 세트',p:49000,d:1150/4.3,t:'1,150다이아 + 5성 재료카드 3 + 상한 +1권 2 / 월'},{n:'시즌패스 프리미엄',p:14900,d:70,t:'선수 EXP +15%, 유학 EXP +10%, 시즌 보상 +30%, 부상 -50%, 보관함 +3'},{n:'골드 패스',p:3900,d:0,t:'골드 23.8만 / 월'},{n:'월간 훈련 세트',p:29000,d:0,t:'상급 훈련권 38 + 5성 한계 돌파권 8 + 경험치권 20 + 골드 8만 / 월'}];
+function render(){const budget=Math.max(0,Number(q('[data-budget]').value)||0),base=Number(q('[data-league]').value),awaken=q('[data-awaken]').checked;const order=awaken?[0,1,3,2,4,5,6]:[0,1,2,3,4,5,6];let spent=0,extra=0,chosen=[];for(const i of order){const p=products[i];if(spent+p.p<=budget){spent+=p.p;extra+=i===4?({450:92,700:235,1400:620}[base]*.3):p.d;chosen.push(p)}}q('[data-total]').textContent='약 '+Math.round(base+extra).toLocaleString('ko-KR')+' 다이아';q('[data-spend]').textContent='월 지출 '+money(spent);q('[data-left]').textContent='남는 예산 '+money(budget-spent);q('[data-breakdown]').textContent='무과금 보상 '+base.toLocaleString('ko-KR')+' + 구매 추가분 '+Math.round(extra).toLocaleString('ko-KR');q('[data-items]').innerHTML=chosen.length?chosen.map(p=>'<div class="item"><div>'+p.n+'<small>'+p.t+'</small></div><span class="cost">'+money(p.p)+'</span></div>').join(''):'<div class="empty">무과금 보상으로 시작해요.</div>';}
+function save(){}
+function apply(state){const m=state?.modelContent;if(m){if(Number.isFinite(m.budget))q('[data-budget]').value=m.budget;const l={세미프로:'450',프로:'700',월드:'1400'};if(l[m.league])q('[data-league]').value=l[m.league];q('[data-awaken]').checked=!!m.awaken;}const tab=state?.privateContent?.tab||'budget';root.querySelectorAll('[data-tab]').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===tab));root.querySelectorAll('[data-panel]').forEach(p=>p.hidden=p.dataset.panel!==tab);render();}
+root.querySelectorAll('input,select').forEach(el=>el.addEventListener('input',()=>{render();save()}));root.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>{root.querySelectorAll('[data-tab]').forEach(t=>t.setAttribute('aria-selected',t===b));root.querySelectorAll('[data-panel]').forEach(p=>p.hidden=p.dataset.panel!==b.dataset.tab);save()}));apply(null);
+})();
+
+(()=>{const names=['traits','budget','experience','stats','deck'];names.forEach(name=>document.getElementById(name+'-tab').addEventListener('click',()=>names.forEach(n=>{const active=n===name;const tab=document.getElementById(n+'-tab');tab.setAttribute('aria-selected',active);tab.setAttribute('aria-pressed',active);document.getElementById(n+'-panel').hidden=!active})))})();
+</script>
+<script src="experience.js"></script>
+<script src="stats.js"></script>
+<script src="deck-model.js"></script><script src="deck-xlsx.js"></script><script src="deck-strategy.js"></script><script src="deck.js"></script>
+</body>
+</html>
