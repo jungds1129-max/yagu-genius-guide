@@ -70,7 +70,7 @@
 .dk-tile dl small{grid-column:1/-1;color:var(--muted);font-size:11.5px}
 .dk-verdict{margin:12px 0 0;font-size:13.5px;font-weight:600;line-height:1.7}
 .dk-keep{margin:10px 0 0;font-size:13px;line-height:1.7;background:#faf6ed;border-left:3px solid #bf8c35;padding:8px 10px;border-radius:4px}
-.dk-pick{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:14px 0}
+.dk-pick{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:14px 0}
 .dk-pick .btn{font-size:13px;padding:8px 6px!important}
 .dk-result{border-radius:12px;background:#eff4ee;padding:14px 16px;margin:12px 0}
 .dk-result ul{margin:8px 0;padding-left:18px;font-size:14px;line-height:1.8}

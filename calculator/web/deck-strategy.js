@@ -7,7 +7,7 @@
  const f=n=>Number(n).toLocaleString('ko-KR',{maximumFractionDigits:1});
  const sign=n=>(n>0?'+':'')+f(n);
  const $=id=>document.getElementById('dk-'+id);
- let data=null,choice='mine',manual=[];
+ let data=null,choice='best',manual=[];
  const BAT_CORE=['파워','컨택','선구안'];
  const LABEL={'pitcher:종합':'투수 종합','batter:종합':'타자 종합'};
  const label=id=>LABEL[id]||((id.startsWith('batter')?'타자 ':'투수 ')+id.split(':')[1]+' 정밀');
@@ -24,48 +24,63 @@
  const cost=()=>Math.max(pool().length,data.settings.roster)*700;
  const maxSessions=()=>{const c=cost();return c?Math.min(data.settings.sessions,Math.floor(data.settings.gold/c)):data.settings.sessions;};
 
+ // 전지훈련 시뮬레이션 (빠른 버전). 정밀: 대상 전원 해당 능력치 +3.5, 종합: 선수별 상한 미달 약한 4개 +1.5, 모두 상한에서 멈춤.
+ // 순서: 정밀 → 투수 종합 → 타자 종합. 입력 안 된 능력치는 0으로 보지 않고, 종합은 입력한 능력치 4개 이상일 때만 계산.
+ const BAT_BASIC=M.batting.slice(0,21);
+ function campKeys(p){
+  const req=p.type==='batter'?BAT_BASIC:[...M.pitching,'포심 구위','포심 제구'];
+  const owned=p.type==='pitcher'?M.pitches.filter(x=>p.stats[x+' 구위']!==undefined||p.stats[x+' 제구']!==undefined).flatMap(x=>[x+' 구위',x+' 제구']):[];
+  return [...new Set([...req,...owned])].filter(k=>p.stats[k]!==undefined);
+ }
+ function order(seq){const r=id=>id.endsWith(':종합')?(id.startsWith('pitcher')?1:2):0;return seq.map((id,i)=>[id,i]).sort((a,b)=>r(a[0])-r(b[0])||a[1]-b[1]).map(x=>x[0]);}
  function simulate(seq){
-  const mode=data.settings.mode;
-  const copy=data.players.map(p=>({...p,stats:Object.fromEntries(entered(p).map(k=>[k,M.project(p,k,mode)])),target:p.level}));
-  const done=new Set(data.settings.done);let invalid=0;
-  for(const id of seq){
-   const row=M.candidates(copy,'current',[...done]).find(r=>r.id===id);
-   if(!row){invalid++;continue;}
-   if(!row.general)done.add(id);
-   for(const a of row.affected){const p=copy.find(q=>q.id===a.id);for(const k of a.stats)p.stats[k]=Math.min(p.cap,p.stats[k]+(row.general?1.5:3.5));}
+  const mode=data.settings.mode,done=new Set(data.settings.done);
+  const copy=data.players.map(p=>({...p,stats:Object.fromEntries(entered(p).map(k=>[k,M.project(p,k,mode)])),target:p.level,camp:campKeys(p)}));
+  const ps=copy.filter(p=>M.eligible(p)&&p.cap!==null);let invalid=0;
+  for(const id of order(seq)){
+   const [type,stat]=id.split(':');
+   if(stat!=='종합'){if(done.has(id)){invalid++;continue;}done.add(id);for(const p of ps)if(p.type===type&&p.stats[stat]!==undefined)p.stats[stat]=Math.min(p.cap,p.stats[stat]+3.5);continue;}
+   for(const p of ps){if(p.type!==type||p.camp.length<4)continue;
+    p.camp.map(k=>({k,gap:p.cap-p.stats[k]})).filter(x=>x.gap>0).sort((a,b)=>b.gap-a.gap).slice(0,4).forEach(x=>p.stats[x.k]=Math.min(p.cap,p.stats[x.k]+1.5));}
   }
   return {players:copy,invalid};
  }
- // 사용자 기본안: 투수 종합 6 + 타자 종합 1 (횟수가 모자라면 투수 쪽을 줄인다).
- function mine(){const n=maxSessions();if(n<=0)return [];if(n===1)return ['pitcher:종합'];return [...Array(Math.min(6,n-1)).fill('pitcher:종합'),'batter:종합'];}
- // 추천안: 상한 여유가 남은 파워·컨택·선구안 정밀 먼저 → 투수 종합 최대 4 → 타자 종합 → 투수 종합.
- function recommended(){
-  const out=[],n=maxSessions(),s=data.settings;
-  for(const k of ['컨택','파워','선구안']){
-   if(out.length>=n)break;const id='batter:'+k;if(s.done.includes(id))continue;
-   if(pool().some(p=>p.type==='batter'&&p.cap!==null&&p.stats[k]!==undefined&&M.project(p,k,s.mode)<p.cap))out.push(id);
+ // 효율 점수: 핵심 스탯 상승 ×1, 그 외 ×0.5, 유지 대상(2~3각 33~37세)의 파워·컨택·선구안 ×2 (은퇴 전까지 지명타자로 오래 쓰기).
+ // 남은 사용 기간: 일반 선수는 35세(정산 -3 시작), 2~3각 타자는 38세(은퇴)까지. 5년 이상이면 1, 짧을수록 낮게 친다.
+ function life(p){if(p.age===null)return 1;const end=p.type==='batter'&&p.awaken>=2?M.KEEP_UNTIL:35;return Math.max(0.2,Math.min(5,end-p.age)/5);}
+ function weightOf(p,k){const w=M.keeper(p)&&BAT_CORE.includes(k)?2:core(p).includes(k)?1:0.5;return w*life(p);}
+ let baseCache=null;
+ function score(sim){const base=baseCache||(baseCache=simulate([]));let s=0;for(const a of sim.players){if(!M.eligible(a)||a.cap===null)continue;const b=base.players.find(q=>q.id===a.id);for(const k of Object.keys(a.stats))s+=(a.stats[k]-b.stats[k])*weightOf(a,k);}return s;}
+ const PRECISION=['파워','컨택','선구안','스피드','멘탈'].map(k=>'batter:'+k);
+ // 가능한 조합을 모두 계산해 효율 순으로 정렬. 효과가 같으면 횟수가 적은 쪽(골드 절약)을 먼저.
+ let ranked=null;
+ function rankAll(){
+  if(ranked)return ranked;const n=maxSessions(),free=PRECISION.filter(id=>!data.settings.done.includes(id)),out=[],seen=new Set();
+  for(let mask=0;mask<1<<free.length;mask++){
+   const pre=free.filter((_,i)=>mask&1<<i);if(pre.length>n)continue;
+   for(let total=pre.length;total<=n;total++)for(let pg=0;pg<=total-pre.length;pg++){
+    const seq=[...pre,...Array(pg).fill('pitcher:종합'),...Array(total-pre.length-pg).fill('batter:종합')],key=seq.join();if(seen.has(key))continue;seen.add(key);
+    out.push({seq,score:score(simulate(seq))});
+   }
   }
-  while(out.length<n){
-   const sim=simulate(out),rows=M.candidates(sim.players,'current',[...s.done,...out.filter(id=>!id.endsWith(':종합'))]);
-   const pc=out.filter(id=>id==='pitcher:종합').length,ok=id=>rows.find(r=>r.id===id&&r.affected.length);
-   const best=(pc<4&&ok('pitcher:종합'))||ok('batter:종합')||ok('pitcher:종합');if(!best)break;out.push(best.id);
-  }
-  return out;
+  out.sort((a,b)=>b.score-a.score>0.05?1:a.score-b.score>0.05?-1:a.seq.length-b.seq.length);
+  return ranked=out;
  }
- function sequence(){return choice==='mine'?mine():choice==='rec'?recommended():manual.slice(0,7);}
- function describe(seq){const c={};seq.forEach(id=>c[id]=(c[id]||0)+1);return Object.entries(c).map(([id,n])=>label(id)+(n>1?' '+n+'회':'')).join(' + ')||'선택 없음';}
+ function best(){return rankAll()[0]?.seq||[];}
+ function sequence(){return choice==='manual'?manual.slice(0,7):best();}
+ function describe(seq){const c={};order(seq).forEach(id=>c[id]=(c[id]||0)+1);return Object.entries(c).map(([id,n])=>label(id)+(n>1?' '+n+'회':'')).join(' + ')||'안 함';}
 
  // 플랜 결과를 타입별로 요약.
  function effect(seq){
-  const sim=simulate(seq),base=simulate([]),out={};
+  const sim=simulate(seq),base=baseCache||(baseCache=simulate([])),out={};
   for(const type of ['batter','pitcher']){
-   const ps=pool().filter(p=>p.type===type&&p.cap!==null);let before=[],after=[],room=[],gain=0,none=0,counted=0;
+   const ps=pool().filter(p=>p.type===type&&p.cap!==null);let before=[],after=[],room=[],gain=0,none=0;
    for(const p of ps){const a=sim.players.find(q=>q.id===p.id),b=base.players.find(q=>q.id===p.id),ks=core(p);let g=0;
-    for(const k of entered(p))g+=a.stats[k]-b.stats[k];gain+=g;counted++;if(g<=0)none++;
+    for(const k of entered(p))g+=a.stats[k]-b.stats[k];gain+=g;if(g<=0)none++;
     for(const k of ks){before.push(b.stats[k]);after.push(a.stats[k]);room.push(p.cap-a.stats[k]);}}
-   out[type]={n:ps.length,before:avg(before),after:avg(after),room:avg(room),gain,none,counted};
+   out[type]={n:ps.length,before:avg(before),after:avg(after),room:avg(room),gain,none};
   }
-  return {...out,invalid:sim.invalid,sim};
+  return {...out,invalid:sim.invalid,sim,score:score(sim)};
  }
 
  // ── ② 팀 현황 ─────────────────────────────
@@ -95,37 +110,36 @@
  function camp(){
   const box=$('camp');if(!box)return;
   if(!pool().some(p=>p.cap!==null)){box.innerHTML='<p class="dk-empty">상한을 입력한 선수가 있어야 전지훈련 결과를 계산해요.</p>';return;}
-  const seq=sequence(),e=effect(seq),c=cost(),total=seq.length*c,s=data.settings;
-  const rec=recommended(),er=effect(rec),mineSeq=mine();
+  const all=rankAll(),top=all[0],seq=sequence(),e=effect(seq),c=cost(),total=seq.length*c,s=data.settings;
   const lines=[];
-  const part=(type,name)=>{const x=e[type];if(!x.n)return;
-   lines.push('<b>'+name+'</b> 핵심 스탯 평균 '+(x.before===null?'—':f(x.before)+' → <b>'+f(x.after)+'</b> ('+sign(x.after-x.before)+')')+', 상한까지 평균 '+(x.room===null?'—':f(x.room))+' 남아요.'+(x.none?' '+x.none+'명은 이미 상한이라 효과가 없어요.':''));};
+  const part=(type,name)=>{const x=e[type];if(!x.n)return;if(!seq.some(id=>id.startsWith(type))){lines.push('<b>'+name+'</b>는 이번 조합에 캠프가 없어요. 핵심 스탯 평균 '+(x.before===null?'—':f(x.before))+', 상한까지 '+(x.room===null?'—':f(x.room))+' 남아요.');return;}
+   lines.push('<b>'+name+'</b> 핵심 스탯 평균 '+(x.before===null?'—':f(x.before)+' → <b>'+f(x.after)+'</b> ('+sign(x.after-x.before)+')')+', 상한까지 평균 '+(x.room===null?'—':f(x.room))+' 남아요.'+(x.none?' '+x.none+'명은 이미 상한이라 효과 없음.':''));};
   part('batter','타자');part('pitcher','투수');
-  const keepers=pool().filter(M.keeper),hasPrecision=seq.some(id=>BAT_CORE.some(k=>id==='batter:'+k));
+  // 왜 이 조합인가
+  const why=[],base=baseCache,bats=pool().filter(p=>p.type==='batter'&&p.cap!==null);
+  const capped=bats.filter(p=>BAT_CORE.every(k=>p.stats[k]===undefined||base.players.find(q=>q.id===p.id).stats[k]>=p.cap)&&BAT_CORE.some(k=>p.stats[k]!==undefined));
+  const keepers=pool().filter(M.keeper),pit=pool().filter(p=>p.type==='pitcher'&&p.cap!==null);
+  if(capped.length)why.push('타자 '+capped.length+'명('+capped.slice(0,4).map(p=>esc(p.name)).join(', ')+(capped.length>4?' 등':'')+')은 레벨업 후 파워·컨택·선구안이 이미 상한이라 정밀을 올려도 효과가 없어요.');
+  if(keepers.length)why.push('유지 대상('+keepers.map(p=>esc(p.name)+' '+p.age+'세').join(', ')+')은 '+M.KEEP_UNTIL+'세까지 지명타자로 쓸 선수라, 상한 아래로 떨어진 파워·컨택·선구안을 채우는 건 두 배로 쳐서 계산했어요. 상한에 있으면 0으로 계산해요.');
+  if(pit.length){const young=pit.filter(p=>p.age!==null&&p.age<30).length,room=effect([]).pitcher.room;why.push('투수 '+pit.length+'명 중 '+young+'명이 30세 미만이라 오른 스탯을 오래 써요. 핵심 스탯은 상한까지 평균 '+(room===null?'—':f(room))+' 남아 있어요.');}
+  const runner=all.slice(1).filter(r=>r.seq.length).slice(0,2);
   const advice=[];
-  if(keepers.length&&!hasPrecision){
-   const freeCore=BAT_CORE.find(k=>!s.done.includes('batter:'+k));
-   const swap=seq.includes('batter:종합')?seq.map(id=>id==='batter:종합'&&freeCore?'batter:'+freeCore:id):[...seq.slice(0,-1),freeCore?'batter:'+freeCore:seq.at(-1)];
-   const es=effect(swap),kg=list=>keepers.reduce((n,p)=>{const a=list.sim.players.find(q=>q.id===p.id),b=e.sim.players.find(q=>q.id===p.id);return n+BAT_CORE.reduce((m,k)=>m+((a.stats[k]??0)-(b.stats[k]??0)),0);},0);
-   if(freeCore&&kg(es)>0)advice.push('유지 대상('+keepers.map(p=>esc(p.name)).join(', ')+')이 있어요. '+(seq.includes('batter:종합')?'타자 종합 1회를':'1회를')+' <b>타자 '+freeCore+' 정밀</b>로 바꾸면 이 선수들 핵심 스탯이 합계 '+sign(kg(es))+' 더 올라요.');
-  }
-  if(e.pitcher.n&&e.pitcher.none>=Math.ceil(e.pitcher.n/2)&&seq.filter(id=>id==='pitcher:종합').length>=3)advice.push('투수 절반 이상이 상한이라 종합 캠프 효과가 없어요. 투수 종합 횟수를 줄이고 타자 쪽에 쓰는 게 나아요.');
-  if(e.batter.n&&e.batter.room!==null&&e.batter.room<=0.5&&seq.some(id=>id.startsWith('batter')))advice.push('타자 핵심 스탯은 거의 상한이에요. 타자 캠프는 스피드·멘탈 같은 미달 능력치로 돌리세요.');
-  const tg=x=>x.batter.gain+x.pitcher.gain;
-  if(choice!=='rec'&&tg(er)-tg(e)>=1)advice.push('추천안('+describe(rec)+')이 전체 능력치 합계로 '+sign(tg(er)-tg(e))+' 더 높아요.');
-  if(!advice.length)advice.push(choice==='mine'?'이대로 돌려도 좋아요.':'이 조합 그대로 돌리면 돼요.');
-  if(total>s.gold)advice.unshift('<span class="dk-bad">예산 초과</span>: 1회 '+f(c)+'골드 × '+seq.length+'회 = '+f(total)+'골드. 골드나 횟수를 확인하세요.');
-  const partial=pool().some(p=>p.cap!==null&&entered(p).length<(p.type==='batter'?21:9));
+  if(choice==='manual'&&top&&top.score-e.score>=0.5)advice.push('추천 조합('+describe(top.seq)+')이 효율 점수로 '+f(top.score-e.score)+' 더 높아요.');
+  if(choice!=='manual'&&top&&top.seq.length<maxSessions())advice.push((maxSessions()-top.seq.length)+'회는 더 돌려도 오를 게 없어서 골드를 아끼는 게 나아요.');
+  if(total>s.gold)advice.unshift('<span class="dk-bad">예산 초과</span>: 1회 '+f(c)+'골드 × '+seq.length+'회 = '+f(total)+'골드.');
+  const partial=pool().some(p=>p.cap!==null&&campKeys(p).length<(p.type==='batter'?21:9));
 
   box.innerHTML='<div class="dk-pick" role="group" aria-label="전지훈련 조합">'+
-   [['mine','투수 종합 '+mineSeq.filter(id=>id==='pitcher:종합').length+' + 타자 종합 '+mineSeq.filter(id=>id==='batter:종합').length],['rec','추천안'],['manual','직접 짜기']].map(([id,t])=>'<button type="button" class="btn'+(choice===id?' dk-primary':'')+'" data-choice="'+id+'" aria-pressed="'+(choice===id)+'">'+t+'</button>').join('')+'</div>'+
-   (choice==='manual'?'<div class="dk-grid dk-slots">'+Array.from({length:Math.max(1,s.sessions)},(_,i)=>'<label>'+(i+1)+'회차<select data-camp-slot="'+i+'"><option value="">안 함</option>'+[['pitcher:종합'],['batter:종합'],...['파워','컨택','선구안','스피드','멘탈'].map(k=>['batter:'+k])].map(([id])=>'<option value="'+id+'"'+(manual[i]===id?' selected':'')+'>'+label(id)+'</option>').join('')+'</select></label>').join('')+'</div>':'')+
-   '<div class="dk-result"><p class="dk-seq"><b>'+describe(seq)+'</b> · '+seq.length+'회 · '+f(total)+'골드</p>'+
+   [['best','추천 (효율 최고)'],['manual','직접 짜서 비교']].map(([id,t])=>'<button type="button" class="btn'+(choice===id?' dk-primary':'')+'" data-choice="'+id+'" aria-pressed="'+(choice===id)+'">'+t+'</button>').join('')+'</div>'+
+   (choice==='manual'?'<div class="dk-grid dk-slots">'+Array.from({length:Math.max(1,s.sessions)},(_,i)=>'<label>'+(i+1)+'회차<select data-camp-slot="'+i+'"><option value="">안 함</option>'+['pitcher:종합','batter:종합',...PRECISION].map(id=>'<option value="'+id+'"'+(manual[i]===id?' selected':'')+'>'+label(id)+'</option>').join('')+'</select></label>').join('')+'</div>':'')+
+   '<div class="dk-result"><p class="dk-seq">'+(choice==='manual'?'내 조합: ':'이번엔 ')+'<b>'+describe(seq)+'</b>'+(choice==='manual'?'':' 가세요')+'</p><p class="dk-muted">'+seq.length+'회 · '+f(total)+'골드 · 효율 점수 '+f(e.score)+'</p>'+
    '<ul>'+lines.map(l=>'<li>'+l+'</li>').join('')+'</ul>'+
-   '<h4>그래서 이렇게 하세요</h4><ul class="dk-advice">'+advice.map(a=>'<li>'+a+'</li>').join('')+'</ul>'+
-   (e.invalid?'<p class="dk-warning">이미 한 정밀훈련이나 같은 정밀 중복 '+e.invalid+'회는 효과에서 뺐어요.</p>':'')+
-   (partial?'<p class="dk-muted">일부 선수는 능력치를 다 입력하지 않아서, 종합 캠프는 입력한 능력치 중 약한 4개로 추정했어요.</p>':'')+
-   '<p class="dk-muted">'+(s.mode==='target'?'목표 레벨까지 올린 뒤':'현재 스탯')+' 기준 · 정밀 +3.5, 종합 +1.5 중간값으로 계산한 추정이에요.</p></div>'+
+   (advice.length?'<ul class="dk-advice">'+advice.map(a=>'<li>'+a+'</li>').join('')+'</ul>':'')+
+   (choice!=='manual'&&why.length?'<h4>왜 이 조합인가요</h4><ul>'+why.map(w=>'<li>'+w+'</li>').join('')+'</ul>':'')+
+   (choice!=='manual'&&runner.length?'<h4>다음으로 좋은 조합</h4><ul>'+runner.map(r=>'<li>'+describe(r.seq)+' <span class="dk-muted">(효율 '+f(r.score)+', '+f(r.score-top.score)+')</span></li>').join('')+'</ul>':'')+
+   (e.invalid?'<p class="dk-warning">이미 한 정밀훈련이나 중복 정밀 '+e.invalid+'회는 효과에서 뺐어요.</p>':'')+
+   (partial?'<p class="dk-muted">능력치를 다 넣지 않은 선수는 종합 캠프를 입력한 능력치 중 약한 4개로 추정했어요.</p>':'')+
+   '<p class="dk-muted">'+(s.mode==='target'?'목표 레벨까지 올린 뒤':'현재 스탯')+' 기준 추정 · 정밀 +3.5, 종합 +1.5 · 효율 점수는 핵심 스탯 ×1, 나머지 ×0.5, 유지 대상의 파워·컨택·선구안 ×2에 남은 사용 기간(35세, 2~3각 타자는 38세까지, 최대 5년)을 곱해 합산해요. 35세 이상은 정산 -3이 반영된 스탯으로 넣어 주세요.</p></div>'+
    '<details class="dk-more"><summary>선수별 전지훈련 후 예상 스탯</summary>'+table(e)+'</details>';
  }
  function table(e){
@@ -171,9 +185,9 @@
  }
 
  function render(){if(!data)return;team();camp();guide();}
- document.addEventListener('deck-analysis',e=>{data=e.detail;render();});
+ document.addEventListener('deck-analysis',e=>{data=e.detail;ranked=null;baseCache=null;render();});
  document.addEventListener('click',e=>{
-  const c=e.target.closest('[data-choice]');if(c&&data){choice=c.dataset.choice;if(choice==='manual'&&!manual.length)manual=mine();render();return;}
+  const c=e.target.closest('[data-choice]');if(c&&data){choice=c.dataset.choice;if(choice==='manual'&&!manual.length)manual=best();render();return;}
   if(e.target.closest('[data-coach-add]'))$('new')?.click();
  });
  document.addEventListener('change',e=>{if(!e.target.matches('[data-camp-slot]'))return;manual=[...document.querySelectorAll('[data-camp-slot]')].map(el=>el.value).filter(Boolean);render();});
