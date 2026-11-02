@@ -28,6 +28,8 @@
     return p;
   }
   function project(p,k,mode='target'){if(p.stats[k]===undefined)return null;const value=p.stats[k]+(mode==='target'?p.target-p.level:0);return p.cap===null?value:Math.min(p.cap,value);}
+  // 2~3각 타자는 은퇴 가능 나이(33세+)가 지나도 계속 쓰는 유지 대상으로 본다.
+  function keeper(p){return p.type==='batter'&&p.awaken>=2&&p.age!==null&&p.age>=33;}
   function eligible(p){return p.status!=='보관함';}
   function candidates(players,mode='target',done=[]){
     const out=[];
@@ -35,7 +37,7 @@
       const group=players.filter(p=>eligible(p)&&p.type===type);
       for(const stat of [...keys[type],'종합']){
         const id=type+':'+stat;if(done.includes(id))continue;
-        const general=stat==='종합',affected=[];let low=0,high=0,score=0,unknown=0;
+        const general=stat==='종합',affected=[];let low=0,high=0,score=0,unknown=0,partial=0;
         for(const p of group){
           if(p.cap===null){unknown++;continue;}
           if(!general&&p.stats[stat]===undefined){unknown++;continue;}
@@ -43,13 +45,16 @@
           const required=type==='batter'?batting.slice(0,21):[...pitching,'포심 구위','포심 제구'];
           const owned=type==='pitcher'?pitches.filter(pitch=>p.stats[pitch+' 구위']!==undefined||p.stats[pitch+' 제구']!==undefined).flatMap(pitch=>[pitch+' 구위',pitch+' 제구']):[];
           const campKeys=[...new Set([...required,...owned])];
-          if(general&&campKeys.some(k=>p.stats[k]===undefined)){unknown++;continue;}
-          const gaps=(general?campKeys:[stat]).map(k=>({k,gap:Math.max(0,p.cap-project(p,k,mode))})).filter(x=>x.gap>0).sort((a,b)=>b.gap-a.gap).slice(0,general?4:1);
+          // Missing stats are not treated as 0. With 4+ entered stats a general camp is estimated from the entered ones only (flagged as partial).
+          let useKeys=general?campKeys.filter(k=>p.stats[k]!==undefined):[stat];
+          if(general&&useKeys.length<4){unknown++;continue;}
+          if(general&&useKeys.length<campKeys.length)partial++;
+          const gaps=useKeys.map(k=>({k,gap:Math.max(0,p.cap-project(p,k,mode))})).filter(x=>x.gap>0).sort((a,b)=>b.gap-a.gap).slice(0,general?4:1);
           if(!gaps.length)continue;
           const a=gaps.reduce((n,x)=>n+Math.min(x.gap,general?1:3),0),b=gaps.reduce((n,x)=>n+Math.min(x.gap,general?2:4),0);
-          low+=a;high+=b;score+=(a+b)/2*weight[p.priority];affected.push({id:p.id,name:p.name,priority:p.priority,low:a,high:b,stats:gaps.map(x=>x.k)});
+          low+=a;high+=b;score+=(a+b)/2*(keeper(p)?Math.max(3,weight[p.priority]):weight[p.priority]);affected.push({id:p.id,name:p.name,priority:p.priority,low:a,high:b,stats:gaps.map(x=>x.k)});
         }
-        out.push({id,type,stat,general,label:(type==='batter'?'야수':'투수')+' '+(general?'종합':stat+' 정밀'),low,high,score,unknown,affected});
+        out.push({id,type,stat,general,label:(type==='batter'?'야수':'투수')+' '+(general?'종합':stat+' 정밀'),low,high,score,unknown,partial,affected});
       }
     }
     return out.sort((a,b)=>b.score-a.score||b.low-a.low||a.label.localeCompare(b.label,'ko'));
@@ -85,5 +90,5 @@
       return {player:p,state,candidate:top||null,selected:pool[0]||null,pool:pool.length,warning};
     }).sort((a,b)=>b.player.age-a.player.age);
   }
-  scope.DeckModel={batting,pitching,pitches,pitchStats,keys,positions,location,weight,player,project,eligible,candidates,plan,succession};
+  scope.DeckModel={batting,pitching,pitches,pitchStats,keys,positions,location,weight,player,project,eligible,keeper,candidates,plan,succession};
 })(typeof module==='object'?module.exports:window);

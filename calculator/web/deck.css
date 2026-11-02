@@ -54,3 +54,49 @@
 #deck-panel [hidden]{display:none!important}.dk-extra{margin:16px 0;padding:12px;border:1px solid var(--line);border-radius:10px}.dk-pitches{grid-column:1/-1}.dk-pitches summary{font-weight:700}
 
 .dk-team-summary{display:grid;grid-template-columns:1fr 1fr;gap:14px}.dk-team-summary>div{border:1px solid var(--line);padding:14px;border-radius:12px}.dk-team-summary h4{margin:0;color:var(--accent)}.dk-team-summary small{color:var(--muted);line-height:1.8}.dk-warning{color:#9b491b;font-weight:700}#dk-plan{display:none}@media(max-width:600px){.dk-team-summary{grid-template-columns:1fr}}
+
+/* 코치 화면 (팀 현황·전지훈련·선수별 훈련) */
+#deck-panel h4{font-size:16px;margin:18px 0 8px}
+.dk-sub{font-size:14px!important;margin:6px 0 0!important}
+.dk-tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.dk-tile{border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--bg)}
+.dk-tile h4{margin:0 0 10px!important;font-size:18px!important}
+.dk-tile h4 span{font-size:13px;color:var(--muted);font-weight:500}
+.dk-tile dl{display:grid;gap:10px;margin:0}
+.dk-tile dl>div{display:grid;grid-template-columns:1fr auto;align-items:baseline;gap:0 8px}
+.dk-tile dt{font-size:13px;font-weight:600}
+.dk-tile dd{margin:0;font-size:15px;text-align:right;font-family:'IBM Plex Mono',monospace}
+.dk-tile dd b{font-size:20px;color:var(--accent)}
+.dk-tile dl small{grid-column:1/-1;color:var(--muted);font-size:11.5px}
+.dk-verdict{margin:12px 0 0;font-size:13.5px;font-weight:600;line-height:1.7}
+.dk-keep{margin:10px 0 0;font-size:13px;line-height:1.7;background:#faf6ed;border-left:3px solid #bf8c35;padding:8px 10px;border-radius:4px}
+.dk-pick{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:14px 0}
+.dk-pick .btn{font-size:13px;padding:8px 6px!important}
+.dk-result{border-radius:12px;background:#eff4ee;padding:14px 16px;margin:12px 0}
+.dk-result ul{margin:8px 0;padding-left:18px;font-size:14px;line-height:1.8}
+.dk-result h4{margin:12px 0 4px!important;font-size:15px!important}
+.dk-seq{margin:0;font-size:15px}
+.dk-advice li{font-weight:600}
+.dk-bad,.dk-warning{color:var(--bad)}
+.dk-warning{font-size:13px}
+.dk-more>summary,.dk-extra>summary,.dk-coach-player>summary{cursor:pointer;font-weight:600;font-size:14px;padding:6px 0}
+.dk-extra{margin:10px 0}
+.dk-coach-player{border-top:1px solid var(--line);padding:10px 0}
+.dk-coach-player>summary{display:flex;justify-content:space-between;align-items:center;gap:8px;list-style:none}
+.dk-coach-player>summary::-webkit-details-marker{display:none}
+.dk-coach-player>summary small{display:block;color:var(--muted);font-weight:400;font-size:12px}
+.dk-coach-player>summary em{font-style:normal;font-size:12px;background:#e8f2ec;color:#125d45;border-radius:6px;padding:4px 8px;text-align:right;flex-shrink:0;max-width:55%}
+.dk-coach-player p{font-size:13.5px;line-height:1.8;margin:6px 0}
+.dk-scroll{overflow-x:auto;margin:8px 0}
+.dk-table{width:100%;border-collapse:collapse;font-size:13px}
+.dk-table th,.dk-table td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+.dk-table th:first-child{text-align:left}
+.dk-table em,.dk-tag{font-style:normal;font-size:11px;background:#faf6ed;color:#8a5f12;border-radius:4px;padding:1px 5px}
+.dk-table tr.dk-core th,.dk-table tr.dk-core td{font-weight:700;background:#f6faf6}
+.dk-roster-group .dk-heading h4{margin:0!important}
+.dk-search{margin:10px 0}
+.dk-slots{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(max-width:600px){.dk-tiles{grid-template-columns:1fr}.dk-heading .dk-search{max-width:none}}
+#deck-panel .dk-roster-group .dk-heading{border-bottom:2px solid #125d45;padding-bottom:6px}#deck-panel .dk-roster-group .dk-heading h4{background:none;color:var(--fg);padding:0;font-size:18px;margin:0}
+/* 휴대폰에서도 입력 칸은 두 줄로 나란히, 선수 카드 버튼은 오른쪽에 작게 */
+@media(max-width:600px){#deck-panel .dk-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}#deck-panel .dk-player{flex-direction:row;align-items:center}#deck-panel .dk-player .dk-toolbar{margin:0;flex-wrap:nowrap;gap:6px}#deck-panel .dk-player .btn{min-height:36px;padding:6px 10px;font-size:13px}}
