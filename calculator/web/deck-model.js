@@ -15,10 +15,11 @@
     const p={id:String(raw.id||'').slice(0,100),type,name:String(raw.name||'').trim().slice(0,60),position:raw.position,status:raw.status,priority:raw.priority,stats:{}};
     if(!p.id||!p.name)throw Error('선수 이름과 ID가 필요합니다.');
     if(!positions[type].includes(p.position)||!location.includes(p.status)||!weight[p.priority])throw Error('포지션·소속·육성 구분을 확인하세요.');
-    p.age=number(raw.age,19,60,'나이',true);p.star=number(raw.star,3,5,'등급');p.awaken=number(raw.awaken,0,3,'각성');p.level=number(raw.level,1,30,'현재 레벨');p.target=number(raw.target,p.level,30,'목표 레벨');
+    p.age=number(raw.age,17,60,'나이',true);p.star=number(raw.star,3,5,'등급');p.awaken=number(raw.awaken,0,3,'각성');p.level=number(raw.level,1,30,'현재 레벨');p.target=number(raw.target,p.level,30,'목표 레벨');
     for(const k of ['age','star','awaken','level','target'])if(p[k]!==null&&!Number.isInteger(p[k]))throw Error('나이·등급·각성·레벨은 정수로 입력하세요.');
     p.cap=number(raw.cap,1,300,'기본 상한',true);p.ovr=number(raw.ovr,0,300,'현재 OVR',true);p.used=number(raw.used,0,70,'훈련 횟수',true);p.limit=number(raw.limit,0,70,'훈련 한도',true);
     for(const k of ['used','limit'])if(p[k]!==null&&!Number.isInteger(p[k]))throw Error('훈련 횟수는 정수로 입력하세요.');
+    if(p.limit!==null&&(p.limit<50||p.limit> (p.star===5?55+p.awaken*5:50)))throw Error('훈련 한도를 확인하세요. 기본 50회, 5성 돌파권 사용 시 각성별 최대 55/60/65/70회입니다.');
     if(p.used!==null&&p.limit!==null&&p.used>p.limit)throw Error('완료 횟수가 훈련 한도보다 큽니다.');
     p.successorId=String(raw.successorId||'').slice(0,100);
     if(p.successorId===p.id)throw Error('자기 자신을 후계자로 지정할 수 없습니다.');
@@ -39,9 +40,9 @@
           if(p.cap===null){unknown++;continue;}
           if(!general&&p.stats[stat]===undefined){unknown++;continue;}
           // A general camp needs the entire group recorded: an unentered low stat could change the chosen four.
-          const required=type==='batter'?batting.slice(0,21):pitching;
+          const required=type==='batter'?batting.slice(0,21):[...pitching,'포심 구위','포심 제구'];
           const owned=type==='pitcher'?pitches.filter(pitch=>p.stats[pitch+' 구위']!==undefined||p.stats[pitch+' 제구']!==undefined).flatMap(pitch=>[pitch+' 구위',pitch+' 제구']):[];
-          const campKeys=[...required,...owned];
+          const campKeys=[...new Set([...required,...owned])];
           if(general&&campKeys.some(k=>p.stats[k]===undefined)){unknown++;continue;}
           const gaps=(general?campKeys:[stat]).map(k=>({k,gap:Math.max(0,p.cap-project(p,k,mode))})).filter(x=>x.gap>0).sort((a,b)=>b.gap-a.gap).slice(0,general?4:1);
           if(!gaps.length)continue;
@@ -67,7 +68,7 @@
     return {steps,cost,left};
   }
   function core(p){
-    if(p.type==='pitcher')return ['순간구위','멘탈','피칭IQ',...(p.position==='SP'?['체력']:['복구력'])];
+    if(p.type==='pitcher')return [...pitchStats,'구속','멘탈','피칭IQ'];
     if(p.position==='SS'||p.position==='2B')return ['수비범위','반응속도','포구','어깨','컨택','선구안'];
     if(p.position==='C')return ['포구안정','리드','블로킹','도루저지','컨택','선구안'];
     if(p.position==='CF')return ['수비범위','타구판단','스피드','컨택','선구안'];
@@ -80,7 +81,7 @@
       const ranked=pool.map(compare).filter(Boolean).sort((a,b)=>b.now-a.now||b.future-a.future);
       const top=ranked[0];let state=!pool.length?'후계자 준비 필요':!top?'후보 스탯 입력 필요':top.now>=0?'교체 검토':'후계자 육성 중';
       if(p.age<35&&top)state=p.age>=33&&top.now<0?'후계자 우선 육성':p.age===32?'후계자 육성 점검':'미리 준비';
-      const warning=p.age===null?'나이 미입력 · 지정 후계자 비교':p.age>=35?'35세 이상 · 시즌 정산마다 전 능력치 -3에 대비':p.age>=33?'33~34세 · 후계자 준비 상태 우선 점검':p.age===32?'32세 · 후계자 육성 시작·성장 비교':'30세부터 후계 후보 확보 · 즉시 교체할 필요는 없습니다.';
+      const warning=p.age>=40?'40세 · 계약 강제 만료·재계약 불가 대비':p.age===null?'나이 미입력 · 지정 후계자 비교':p.age>=35?'35세 이상 · 시즌 정산마다 전 능력치 -3에 대비':p.age>=33?'33~34세 · 후계자 준비 상태 우선 점검':p.age===32?'32세 · 후계자 육성 시작·성장 비교':'30세부터 후계 후보 확보 · 즉시 교체할 필요는 없습니다.';
       return {player:p,state,candidate:top||null,selected:pool[0]||null,pool:pool.length,warning};
     }).sort((a,b)=>b.player.age-a.player.age);
   }

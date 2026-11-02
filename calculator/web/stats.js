@@ -38,7 +38,7 @@
     const important=e=>p.keys.includes(e.name)||(profile==='SP'||profile==='RP'||profile==='CP')&&e.id.startsWith('st-pitch-'+main+'-');
     const core=entries.filter(important),outside=entries.filter(e=>!important(e));
     if(context.used!==null&&context.limit!==null&&context.used>=context.limit)return {core,items:[],outside,blocked:true,capped:[]};
-    const extraTraining=context.used!==null&&context.used>=55;
+    const extraTraining=false;
     const capped=core.filter(e=>context.cap!==null&&e.projected>=context.cap&&!extraTraining);
     const eligible=core.filter(e=>!capped.includes(e)).sort((a,b)=>a.projected-b.projected||a.label.localeCompare(b.label,'ko'));
     return {core,items:core.length>=3?eligible.slice(0,3):[],outside,blocked:false,capped,extraTraining};
@@ -77,7 +77,7 @@
       if(context.cap===null)notes.push('기본 상한 미입력');
       if(context.used===null||context.limit===null)notes.push('남은 훈련 횟수 미확인');
       else notes.push('남은 훈련 '+Math.max(0,context.limit-context.used)+'회');
-      if(r.extraTraining)notes.push('56회차 이후 추가 성장 후보 · 기본 상한과 별도');
+      if(r.extraTraining)notes.push('56회차 이후 추가 성장은 가이드 충돌로 미반영');
       $('reco-note').textContent=notes.join(' · ');
       $('reco-lower').textContent=r.capped.length?'후순위 · 목표 레벨에서 상한에 닿는 항목: '+r.capped.map(e=>e.label).join(', '):r.outside.length?'낮음 · 선택한 역할의 핵심 항목 밖: '+r.outside.slice(0,4).map(e=>e.label).join(', '):'';
       if(r.blocked){$('reco-status').textContent='남은 훈련 횟수가 없습니다. 한도 확장 가능 여부부터 확인하세요.';return;}
