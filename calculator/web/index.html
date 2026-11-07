@@ -100,6 +100,34 @@ details p{margin:8px 0 0;color:var(--muted);font-size:13px}
 .maker-credit{display:block;width:fit-content;max-width:100%;margin:10px auto 8px;text-align:center;padding:8px 12px;border-radius:8px;background:var(--accent);color:var(--accent-ink);font-size:15px;font-weight:900;letter-spacing:.01em}
 
 .wrap>header{text-align:center}
+
+/* ── 전체 UI 정리 (2026-11-08) ─────────────────── */
+.app-head{display:flex;align-items:center;justify-content:space-between;gap:10px;text-align:left}
+.app-head h1{font-size:24px}
+.app-head .maker-credit{margin:0;padding:4px 9px;font-size:11.5px;font-weight:700;border-radius:999px;white-space:nowrap}
+.wrap{gap:14px;padding-top:14px}
+.panel-head h2,#experience-panel .xp-intro h2,#stats-panel .st-intro h2,#deck-panel .dk-intro h2,#budget-demo .panel-head h2{font-family:var(--display);font-weight:400;font-size:24px;margin:0 0 2px;line-height:1.3}
+.panel-head p,#budget-demo .panel-head p{margin:0;color:var(--muted);font-size:13.5px}
+#budget-demo .panel-head{margin-bottom:16px}
+.main-tabs svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;display:none}
+.main-tabs .t-short{display:none}
+.main-tabs button{display:flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap}
+.main-tabs{grid-template-columns:repeat(5,1fr);grid-auto-flow:row}
+.trait-bar{display:none}
+@media (max-width:760px){
+  body{padding-bottom:calc(68px + env(safe-area-inset-bottom,0px))}
+  .main-tabs{position:fixed;left:0;right:0;bottom:0;z-index:60;border-radius:0;border-width:1px 0 0;padding:4px 4px calc(4px + env(safe-area-inset-bottom,0px));gap:2px;box-shadow:0 -4px 16px #0000000f}
+  .main-tabs button{flex-direction:column;gap:2px;padding:7px 2px 6px;font-size:11.5px;min-height:54px;border-radius:10px}
+  .main-tabs svg{display:block}
+  .main-tabs .t-short{display:block}.main-tabs .t-long{display:none}
+  .main-tabs button[aria-pressed="true"]{background:color-mix(in srgb,var(--accent) 13%,transparent);color:var(--accent)}
+  .trait-bar:not([hidden]){display:flex;position:fixed;left:10px;right:10px;bottom:calc(72px + env(safe-area-inset-bottom,0px));z-index:55;align-items:center;gap:10px;font:inherit;padding:10px 14px;border-radius:14px;border:2px solid var(--accent);background:var(--panel);color:var(--fg);box-shadow:0 6px 20px #0000002a;cursor:pointer}
+  .trait-bar .tb-k{font-size:12px;color:var(--muted);font-weight:700}
+  .trait-bar b{font-family:var(--num);font-size:22px}
+  .trait-bar #tb-pct{margin-left:auto;font-weight:800;font-size:14px}
+  .trait-bar .verdict{font-size:13px;padding:3px 10px}
+}
+@media (min-width:761px){.main-tabs{position:sticky;top:0;z-index:30}}
 </style>
 <link rel="stylesheet" href="experience.css">
 <link rel="stylesheet" href="stats.css">
@@ -108,14 +136,14 @@ details p{margin:8px 0 0;color:var(--muted);font-size:13px}
 <body>
 
 <div class="wrap">
-  <header>
+  <header class="app-head">
     <h1>야구천재 계산기</h1>
-    <p class="maker-credit">팀코리아 - 월드스카우트 제작</p>
-    <p class="lede">특성을 고르면 가산점 합계와 같은 등급 선수 중 상위 몇 %인지 바로 보여줍니다. 리롤할지 말지 판단용.</p>
+    <p class="maker-credit">팀코리아 · 월드스카우트 제작</p>
   </header>
 
-  <div class="seg main-tabs" role="tablist" aria-label="계산기 종류"><button type="button" role="tab" id="traits-tab" aria-controls="traits-panel" aria-selected="true" aria-pressed="true">특성 계산</button><button type="button" role="tab" id="budget-tab" aria-controls="budget-panel" aria-selected="false" aria-pressed="false">과금·재화 계산</button><button type="button" role="tab" id="experience-tab" aria-controls="experience-panel" aria-selected="false" aria-pressed="false">경험치 계산기</button><button type="button" role="tab" id="stats-tab" aria-controls="stats-panel" aria-selected="false" aria-pressed="false">스탯 미리보기</button><button type="button" role="tab" id="deck-tab" aria-controls="deck-panel" aria-selected="false" aria-pressed="false">덱 관리</button></div>
+  <div class="seg main-tabs" role="tablist" aria-label="계산기 종류"><button type="button" role="tab" id="traits-tab" aria-controls="traits-panel" aria-selected="true" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4 6.7 19.4l1.2-6L3.4 9.3l6-.7z"/></svg><span class="t-short">특성</span><span class="t-long">특성 계산</span></button><button type="button" role="tab" id="budget-tab" aria-controls="budget-panel" aria-selected="false" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M9 9.5h4.5a2 2 0 010 4H10m0 0v-6m0 6v2"/></svg><span class="t-short">과금</span><span class="t-long">과금·재화</span></button><button type="button" role="tab" id="experience-tab" aria-controls="experience-panel" aria-selected="false" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18l5-6 4 3 7-9"/><path d="M15 6h5v5"/></svg><span class="t-short">경험치</span><span class="t-long">경험치</span></button><button type="button" role="tab" id="stats-tab" aria-controls="stats-panel" aria-selected="false" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V11M10 20V5M15 20v-7M20 20V8"/></svg><span class="t-short">스탯</span><span class="t-long">스탯 미리보기</span></button><button type="button" role="tab" id="deck-tab" aria-controls="deck-panel" aria-selected="false" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="12" height="15" rx="2"/><path d="M8 3h10a2 2 0 012 2v13"/></svg><span class="t-short">덱</span><span class="t-long">덱 관리</span></button></div>
   <div id="traits-panel" class="trait-panel" role="tabpanel" aria-labelledby="traits-tab">
+  <div class="panel-head"><h2>특성 계산</h2><p>특성을 고르면 가산점 합계와 같은 등급 중 상위 몇 %인지 보여줘요. 리롤할지 판단용.</p></div>
   <div class="ctrls">
     <span class="label">포텐셜</span>
     <div class="seg" id="starSeg" role="group" aria-label="포텐셜">
@@ -133,7 +161,8 @@ details p{margin:8px 0 0;color:var(--muted);font-size:13px}
 
   <div class="slots" id="slots"></div>
 
-  <section class="result" aria-live="polite">
+  <button type="button" class="trait-bar" id="trait-bar" hidden aria-label="결과로 이동"><span class="tb-k">메인 합계</span><b id="tb-total">+0.0</b><span id="tb-pct"></span><span class="verdict" id="tb-verdict">-</span></button>
+  <section class="result" id="trait-result" aria-live="polite">
     <div class="big">
       <div>
         <div class="label">메인 칸 가산점 합계</div>
@@ -164,7 +193,7 @@ details p{margin:8px 0 0;color:var(--muted);font-size:13px}
     <p>강화 등급은 기본 수치에 D +7.5%, C +20%, B +30%, A +40%, S +47.5%를 더한 대략값입니다. 모든 수치는 추정치라 순서 비교용으로 보세요.</p>
   </details>
 </div>
-<section id="budget-panel" role="tabpanel" aria-labelledby="budget-tab" hidden><div id="budget-demo"><div class="phone">
+<section id="budget-panel" role="tabpanel" aria-labelledby="budget-tab" hidden><div id="budget-demo"><div class="phone"><div class="panel-head"><h2>과금·재화 계산</h2><p>한 달 예산으로 받을 수 있는 다이아와 추천 조합을 보여줘요.</p></div>
 <div class="fields"><label>월 예산 (원)<input class="cursor-interaction" data-budget type="number" min="0" max="1000000" step="1000" value="100000"></label><label>현재 리그<select class="cursor-interaction" data-league><option value="450">세미프로</option><option value="700" selected>프로</option><option value="1400">월드</option></select></label></div>
 <label class="toggle cursor-interaction"><input data-awaken type="checkbox">5성 각성 재료를 우선할래요</label>
 <div class="result" aria-live="polite"><div class="kicker">예상 주간 다이아</div><div class="big" data-total></div><div class="meta"><span data-spend></span><span data-left></span></div><div class="note" data-breakdown></div></div>
@@ -356,7 +385,18 @@ function apply(state){const m=state?.modelContent;if(m){if(Number.isFinite(m.bud
 root.querySelectorAll('input,select').forEach(el=>el.addEventListener('input',()=>{render();save()}));root.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>{root.querySelectorAll('[data-tab]').forEach(t=>t.setAttribute('aria-selected',t===b));root.querySelectorAll('[data-panel]').forEach(p=>p.hidden=p.dataset.panel!==b.dataset.tab);save()}));apply(null);
 })();
 
-(()=>{const names=['traits','budget','experience','stats','deck'];names.forEach(name=>document.getElementById(name+'-tab').addEventListener('click',()=>names.forEach(n=>{const active=n===name;const tab=document.getElementById(n+'-tab');tab.setAttribute('aria-selected',active);tab.setAttribute('aria-pressed',active);document.getElementById(n+'-panel').hidden=!active})))})();
+(()=>{const names=['traits','budget','experience','stats','deck'];
+const show=(name,scroll)=>{names.forEach(n=>{const active=n===name;const tab=document.getElementById(n+'-tab');tab.setAttribute('aria-selected',active);tab.setAttribute('aria-pressed',active);document.getElementById(n+'-panel').hidden=!active});if(scroll)window.scrollTo({top:0});};
+names.forEach(name=>document.getElementById(name+'-tab').addEventListener('click',()=>{show(name,true);history.replaceState(null,'','#'+name);}));
+const start=location.hash.slice(1);if(names.includes(start)&&start!=='traits')document.getElementById(start+'-tab').click();
+// 특성 탭: 결과 카드가 화면 밖이면 아래에 합계·판정 바를 띄운다.
+const bar=document.getElementById('trait-bar'),res=document.getElementById('trait-result');let resVisible=true;
+const sync=()=>{document.getElementById('tb-total').textContent=document.getElementById('total').textContent;document.getElementById('tb-pct').textContent=document.getElementById('pct').textContent;const v=document.getElementById('verdict'),tv=document.getElementById('tb-verdict');tv.textContent=v.textContent;tv.className=v.className;bar.hidden=resVisible||document.getElementById('traits-panel').hidden;};
+new MutationObserver(sync).observe(res,{subtree:true,childList:true,characterData:true,attributes:true});
+if('IntersectionObserver' in window)new IntersectionObserver(es=>{resVisible=es[0].isIntersecting;sync();},{rootMargin:'0px 0px -170px 0px'}).observe(res);
+names.forEach(n=>document.getElementById(n+'-tab').addEventListener('click',sync));
+bar.addEventListener('click',()=>res.scrollIntoView({behavior:'smooth',block:'center'}));sync();
+})();
 </script>
 <script src="experience.js"></script>
 <script src="stats.js"></script>

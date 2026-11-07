@@ -1,4 +1,4 @@
-.main-tabs{grid-template-columns:repeat(4,minmax(0,1fr))}
+
 #stats-panel:not([hidden]){display:flex;flex-direction:column;gap:18px}
 #stats-panel{line-height:1.6}
 #stats-panel h2{font-family:var(--display);font-size:24px;font-weight:400;margin:0}
@@ -58,4 +58,4 @@
 #stats-panel .st-reco-context summary span{font-size:12px;font-weight:400;color:var(--muted)}
 #stats-panel .st-reco-context>.st-hint{margin:12px 0}
 #stats-panel #st-reco-error{font-size:12px}
-@media(max-width:480px){.main-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}#stats-panel .st-group{padding:14px}#stats-panel .st-grid{gap:10px}#stats-panel output{font-size:20px}}
+@media(max-width:480px){#stats-panel .st-group{padding:14px}#stats-panel .st-grid{gap:10px}#stats-panel output{font-size:20px}}

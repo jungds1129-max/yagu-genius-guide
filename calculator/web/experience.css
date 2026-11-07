@@ -1,5 +1,5 @@
-.main-tabs{grid-auto-flow:initial;grid-template-columns:repeat(3,minmax(0,1fr))}
-.main-tabs button{font-size:13px;overflow-wrap:anywhere}
+
+
 #experience-panel:not([hidden]){display:flex;flex-direction:column;gap:18px}
 #experience-panel{line-height:1.65}
 #experience-panel .sr-label{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
@@ -80,4 +80,4 @@
  #experience-panel .xp-tag{font-size:11px;margin-left:5px}
  #experience-panel .xp-table small{font-size:12px}
 }
-@media(max-width:360px){.main-tabs button{font-size:12px}#experience-panel .xp-grade{width:112px}#experience-panel h3{font-size:15px}#experience-panel .xp-key-metrics{gap:10px}#experience-panel #xp-count{font-size:30px}#experience-panel .xp-key-metrics dd{font-size:18px}}
+@media(max-width:360px){#experience-panel .xp-grade{width:112px}#experience-panel h3{font-size:15px}#experience-panel .xp-key-metrics{gap:10px}#experience-panel #xp-count{font-size:30px}#experience-panel .xp-key-metrics dd{font-size:18px}}
