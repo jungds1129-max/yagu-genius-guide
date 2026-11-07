@@ -294,7 +294,7 @@ function dist(){
   }
   out.sort();
   const q=p=>out[Math.min(N-1,Math.floor(p*N))];
-  return cache[key]={arr:out,N,avg:out.reduce((a,b)=>a+b,0)/N,p90:q(.9),p95:q(.95),p97:q(.97),p99:q(.99),max:out[N-1]};
+  return cache[key]={arr:out,N,avg:out.reduce((a,b)=>a+b,0)/N,med:q(.5),p90:q(.9),p95:q(.95),p97:q(.97),p99:q(.99),max:out[N-1]};
 }
 function calc(){
   const k=star===5?3:2, d=dist();
@@ -312,8 +312,8 @@ function calc(){
   else{
     $('pct').textContent=filled<k?`${filled}/${k}칸 입력 중`:`상위 약 ${top<1?top.toFixed(1):Math.round(top)}%`;
     if(sum>=d.p90){v.textContent='졸업 · 유지';v.className='verdict v-top';why.textContent=`추정 모델 상위 10%(${fmt(d.p90)}) 이상입니다. 강화 없는 새 조합이 현재 점수를 넘은 추정 결과: ${improveText}.`}
-    else if(sum>d.avg){v.textContent='유지 권장';v.className='verdict v-mid';why.textContent=`추정 모델 평균(${fmt(d.avg)})보다 높습니다. 강화 없는 새 조합이 현재 점수를 넘은 추정 결과: ${improveText}.`}
-    else{v.textContent='리롤 추천';v.className='verdict v-bad';why.textContent=`추정 모델 평균(${fmt(d.avg)}) 이하입니다. 강화 없는 새 조합이 현재 점수를 넘은 추정 결과: ${improveText}. 리롤 비용과 강화 초기화를 함께 고려하세요.`}
+    else if(sum>d.med){v.textContent='유지 권장';v.className='verdict v-mid';why.textContent=`새로 뽑은 조합의 중간값(${fmt(d.med)})보다 높습니다. 리롤하면 절반 이상은 지금보다 나빠집니다. 강화 없는 새 조합이 현재 점수를 넘은 추정 결과: ${improveText}.`}
+    else{v.textContent='리롤 추천';v.className='verdict v-bad';why.textContent=`새로 뽑은 조합의 중간값(${fmt(d.med)}) 이하입니다. 리롤하면 절반 이상은 지금보다 좋아집니다. 강화 없는 새 조합이 현재 점수를 넘은 추정 결과: ${improveText}. 리롤 비용과 강화 초기화를 함께 고려하세요.`}
   }
   // warnings
   const w=[];const dup=names.filter((n,i)=>names.indexOf(n)!==i);
@@ -327,9 +327,9 @@ function calc(){
   // scale
   const max=Math.max(d.max,sum)*1.02, sc=$('scale');
   const pos=x=>Math.min(100,Math.max(0,x/max*100));
-  sc.innerHTML='<div class="track"></div>'+[['평균',d.avg],['10%',d.p90],['1%',d.p99]].map(([l,x])=>`<div class="tick" style="left:${pos(x)}%"><i>${l} ${x.toFixed(1)}</i></div>`).join('')+`<div class="me" style="left:${pos(sum)}%"></div>`;
+  sc.innerHTML='<div class="track"></div>'+[['중간',d.med],['10%',d.p90],['1%',d.p99]].map(([l,x])=>`<div class="tick" style="left:${pos(x)}%"><i>${l} ${x.toFixed(1)}</i></div>`).join('')+`<div class="me" style="left:${pos(sum)}%"></div>`;
   // ref table
-  const rows=[['평균',d.avg],['상위 10% · 졸업',d.p90],['상위 5%',d.p95],['상위 3%',d.p97],['상위 1%',d.p99]];
+  const rows=[['중간값 · 리롤 기준',d.med],['상위 10% · 졸업',d.p90],['상위 5%',d.p95],['상위 3%',d.p97],['상위 1%',d.p99]];
   $('ref').innerHTML=`<tr><th>${star}성 ${role} ${k}칸</th><th>가산점</th></tr>`+rows.map(([l,x])=>`<tr class="${filled&&sum>=x?'on':''}"><td>${l}</td><td>${fmt(x)}</td></tr>`).join('');
 }
 function setSeg(segId,valueSetter){
